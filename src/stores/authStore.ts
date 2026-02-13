@@ -161,48 +161,69 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  initializeAuth: () => {
-    console.log('authStore: Initializing auth listener');
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('authStore: Auth state changed:', event, session?.user?.id);
+  initializeAuth: async () => {
+    console.log('authStore: Initializing auth listener and checking initial session');
 
-      if (session?.user) {
-        try {
-          // If we already have a user in state that matches the session, 
-          // don't bother fetching again unless it's a forced refresh
-          const currentState = useAuthStore.getState();
-          if (currentState.user?.uid === session.user.id && !currentState.loading) {
-            console.log('authStore: User already in state, skipping fetch');
-            return;
-          }
+    try {
+      // 1. Check initial session once to avoid stuck loading if listener is slow
+      const { data: { session }, error: initialError } = await supabase.auth.getSession();
 
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('uid', session.user.id)
-            .single();
+      if (initialError) {
+        console.error('authStore: Initial session fetch error:', initialError.message);
+        set({ loading: false, error: initialError.message });
+      } else if (session?.user) {
+        console.log('authStore: Initial session found for UID:', session.user.id);
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('uid', session.user.id)
+          .single();
 
-          if (userError) {
-            console.error('authStore: Profile fetch error in listener for UID:', session.user.id, userError.message, userError.code);
-            set({ loading: false });
-            if (userError.code === 'PGRST116') {
-              set({ error: 'User profile not found. Please re-register or contact support.' });
-            }
-          } else if (userData) {
-            console.log('authStore: Profile fetched in listener for UID:', session.user.id);
-            set({ user: toCamel(userData) as User, loading: false });
-          } else {
-            console.warn('authStore: No profile returned in listener for UID:', session.user.id);
-            set({ error: 'User profile record is missing.', loading: false });
-          }
-        } catch (e) {
-          console.error('authStore: Error in listener:', e);
+        if (userData) {
+          set({ user: toCamel(userData) as User, loading: false });
+        } else {
           set({ loading: false });
         }
       } else {
-        set({ user: null, loading: false });
+        console.log('authStore: No initial session found');
+        set({ loading: false });
       }
-    });
+
+      // 2. Setup listener for future changes
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('authStore: Auth state change event:', event, session?.user?.id);
+
+        if (session?.user) {
+          const currentState = useAuthStore.getState();
+          // Only fetch if session is different from current user to avoid loops
+          if (currentState.user?.uid !== session.user.id) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('*')
+              .eq('uid', session.user.id)
+              .single();
+
+            if (userData) {
+              set({ user: toCamel(userData) as User, loading: false });
+            }
+          }
+        } else {
+          set({ user: null, loading: false });
+        }
+      });
+
+      // 3. Absolute safety timeout
+      setTimeout(() => {
+        if (useAuthStore.getState().loading) {
+          console.warn('authStore: Initialization timed out, forcing loading to false');
+          set({ loading: false });
+        }
+      }, 5000);
+
+    } catch (e: any) {
+      console.error('authStore: Initialization error:', e);
+      set({ loading: false, error: e.message });
+    }
   },
 
   setUser: (user: User | null) => set({ user, loading: false }),
