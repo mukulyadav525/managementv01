@@ -1,0 +1,178 @@
+{
+  "society": {
+    "id": "society_1",
+    "name": "Sunshine Apartments",
+    "address": {
+      "street": "123 Main Street",
+      "area": "Downtown",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400001"
+    },
+    "totalFlats": 120,
+    "totalBuildings": 4,
+    "contactEmail": "admin@sunshine.com",
+    "contactPhone": "+91 9876543210",
+    "amenities": ["Gym", "Swimming Pool", "Clubhouse", "Parking", "Garden"],
+    "settings": {
+      "maintenanceDay": 5,
+      "latePaymentPenalty": 50,
+      "visitorApprovalRequired": true
+    }
+  },
+  "buildings": [
+    {
+      "id": "building_a",
+      "name": "Tower A",
+      "totalFloors": 10,
+      "totalFlats": 30
+    },
+    {
+      "id": "building_b",
+      "name": "Tower B",
+      "totalFloors": 10,
+      "totalFlats": 30
+    },
+    {
+      "id": "building_c",
+      "name": "Tower C",
+      "totalFloors": 10,
+      "totalFlats": 30
+    },
+    {
+      "id": "building_d",
+      "name": "Tower D",
+      "totalFloors": 10,
+      "totalFlats": 30
+    }
+  ],
+  "sampleFlats": [
+    {
+      "buildingId": "A",
+      "flatNumber": "A-101",
+      "floor": 1,
+      "bhkType": "2BHK",
+      "area": 1200,
+      "occupancyStatus": "owner-occupied",
+      "parkingSlots": ["A-P1"]
+    },
+    {
+      "buildingId": "A",
+      "flatNumber": "A-102",
+      "floor": 1,
+      "bhkType": "2BHK",
+      "area": 1200,
+      "occupancyStatus": "rented",
+      "parkingSlots": ["A-P2"]
+    },
+    {
+      "buildingId": "A",
+      "flatNumber": "A-201",
+      "floor": 2,
+      "bhkType": "3BHK",
+      "area": 1500,
+      "occupancyStatus": "vacant",
+      "parkingSlots": ["A-P3", "A-P4"]
+    },
+    {
+      "buildingId": "B",
+      "flatNumber": "B-101",
+      "floor": 1,
+      "bhkType": "2BHK",
+      "area": 1100,
+      "occupancyStatus": "owner-occupied",
+      "parkingSlots": ["B-P1"]
+    }
+  ],
+  "sampleUsers": [
+    {
+      "email": "admin@sunshine.com",
+      "password": "Admin@123",
+      "name": "Admin User",
+      "phone": "+91 9876543210",
+      "role": "admin",
+      "flatIds": []
+    },
+    {
+      "email": "owner1@example.com",
+      "password": "Owner@123",
+      "name": "John Doe",
+      "phone": "+91 9876543211",
+      "role": "owner",
+      "flatIds": ["flat_a101"]
+    },
+    {
+      "email": "tenant1@example.com",
+      "password": "Tenant@123",
+      "name": "Jane Smith",
+      "phone": "+91 9876543212",
+      "role": "tenant",
+      "flatIds": ["flat_a102"]
+    },
+    {
+      "email": "security@sunshine.com",
+      "password": "Security@123",
+      "name": "Security Guard",
+      "phone": "+91 9876543213",
+      "role": "security",
+      "flatIds": []
+    }
+  ],
+  "complaintCategories": [
+    "Plumbing",
+    "Electrical",
+    "Cleaning",
+    "Lift Maintenance",
+    "Parking",
+    "Common Area",
+    "Security",
+    "Garden/Landscaping",
+    "Water Supply",
+    "Sewage",
+    "Other"
+  ],
+  "visitorTypes": [
+    {
+      "type": "guest",
+      "label": "Guest",
+      "requiresApproval": true
+    },
+    {
+      "type": "delivery",
+      "label": "Delivery Person",
+      "requiresApproval": false
+    },
+    {
+      "type": "service",
+      "label": "Service Provider",
+      "requiresApproval": true
+    },
+    {
+      "type": "cab",
+      "label": "Cab Driver",
+      "requiresApproval": false
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": "upi",
+      "name": "UPI",
+      "enabled": true
+    },
+    {
+      "id": "card",
+      "name": "Credit/Debit Card",
+      "enabled": true
+    },
+    {
+      "id": "netbanking",
+      "name": "Net Banking",
+      "enabled": true
+    },
+    {
+      "id": "cash",
+      "name": "Cash",
+      "enabled": true
+    }
+  ]
+}
