@@ -22,7 +22,6 @@ export const OwnerDashboardPage: React.FC = () => {
     const { user } = useAuthStore();
     const navigate = useNavigate();
     const [myFlats, setMyFlats] = useState<any[]>([]);
-    const [buildings, setBuildings] = useState<any[]>([]);
     const [stats, setStats] = useState({
         totalProperties: 0,
         rentedProperties: 0,
@@ -50,7 +49,6 @@ export const OwnerDashboardPage: React.FC = () => {
 
             // Load buildings for name lookup
             const buildingsData = await SocietyService.getBuildings(user.societyId);
-            setBuildings(buildingsData);
             const buildingMap = new Map(buildingsData.map((b: any) => [b.id, b.name]));
 
             // Load owner's flats

@@ -9,7 +9,6 @@ interface AddTenantModalProps {
     onClose: () => void;
     onSuccess: () => void;
     ownedFlats: Flat[];
-    ownerId: string;
     societyId: string;
 }
 
@@ -18,7 +17,6 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
     onClose,
     onSuccess,
     ownedFlats,
-    ownerId,
     societyId
 }) => {
     const [formData, setFormData] = useState({

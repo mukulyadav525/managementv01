@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Phone, Mail, Edit2, Trash2, Home, UserPlus, DollarSign } from 'lucide-react';
+import { Phone, Mail, Edit2, Trash2, Home, UserPlus, DollarSign } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
@@ -76,7 +76,7 @@ export const OwnerStaffPage: React.FC = () => {
                     myStaff.forEach((s, index) => {
                         const results = historyResults[index];
                         if (Array.isArray(results)) {
-                            historyMap[s.uid] = results.filter(p => p && p.status === 'paid');
+                            historyMap[s.uid] = (results as any[]).filter(p => p && p.status === 'paid');
                         } else {
                             historyMap[s.uid] = [];
                         }

@@ -71,7 +71,7 @@ export const TenantDashboardPage: React.FC = () => {
                 .filter((p: any) => p.status === 'pending' && p.dueDate)
                 .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
             const nextDueDate = pendingWithDates.length > 0
-                ? new Date(pendingWithDates[0].dueDate).toLocaleDateString()
+                ? new Date((pendingWithDates[0] as any).dueDate).toLocaleDateString()
                 : 'None';
 
             // Load tenant's complaints

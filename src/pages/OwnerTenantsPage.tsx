@@ -364,7 +364,6 @@ export const OwnerTenantsPage: React.FC = () => {
                     onClose={() => setShowAddTenantModal(false)}
                     onSuccess={loadOwnedData}
                     ownedFlats={flats}
-                    ownerId={user?.uid || ''}
                     societyId={user?.societyId || ''}
                 />
 

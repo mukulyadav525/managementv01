@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@/components/common';
 import { User } from '@/types';
-import { Eye, Mail, Phone, Calendar, Users, FileText, Car, CreditCard } from 'lucide-react';
+import { Mail, Phone, Calendar, Users, FileText, Car, CreditCard } from 'lucide-react';
 import { PaymentService } from '@/services/supabase.service';
 
 interface TenantDetailsModalProps {
@@ -204,8 +204,8 @@ export const TenantDetailsModal: React.FC<TenantDetailsModalProps> = ({
                                     </div>
                                     <div className="text-right">
                                         <p className={`text-sm font-semibold ${payment.status === 'paid' ? 'text-green-600' :
-                                                payment.status === 'pending' ? 'text-yellow-600' :
-                                                    'text-red-600'
+                                            payment.status === 'pending' ? 'text-yellow-600' :
+                                                'text-red-600'
                                             }`}>
                                             ₹{payment.amount.toLocaleString()}
                                         </p>
