@@ -37,60 +37,97 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
         setLoading(true);
 
         try {
-            // 1. Create auth user
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: formData.email,
-                password: formData.password,
-                options: {
-                    emailRedirectTo: undefined,
-                    data: {
-                        name: formData.name,
-                        role: 'tenant'
-                    }
-                }
-            });
-
-            if (authError) throw authError;
-            if (!authData.user) throw new Error('Failed to create user');
-
-            // 2. Create user record in users table
-            const emergencyContact = formData.emergencyContactName ? {
-                name: formData.emergencyContactName,
-                phone: formData.emergencyContactPhone,
-                relation: formData.emergencyContactRelation
-            } : null;
-
-            const userData = {
-                uid: authData.user.id,
-                email: formData.email,
-                name: formData.name,
-                phone: formData.phone,
-                role: 'tenant',
-                society_id: societyId,
-                flat_ids: [formData.flatId],
-                move_in_date: formData.moveInDate || null,
-                emergency_contact: emergencyContact,
-                status: 'active'
-            };
-
-            const { error: userError } = await supabase
+            // Check if user already exists
+            const { data: existingUser, error: fetchError } = await supabase
                 .from('users')
-                .insert([userData]);
+                .select('*')
+                .eq('email', formData.email)
+                .single();
 
-            if (userError) throw userError;
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                throw fetchError;
+            }
 
-            // 3. Update flat occupancy status
+            let userId = '';
+
+            if (existingUser) {
+                // User exists - update their record
+                userId = existingUser.uid;
+
+                // If they are not a tenant, we might want to warn or just proceed. 
+                // For now, we update them to be part of this society and flat.
+
+                const currentFlatIds = existingUser.flat_ids || [];
+                const newFlatIds = [...new Set([...currentFlatIds, formData.flatId])];
+
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({
+                        society_id: societyId,
+                        flat_ids: newFlatIds,
+                        status: 'active'
+                    })
+                    .eq('uid', userId);
+
+                if (updateError) throw updateError;
+                toast.success('Existing tenant linked to flat!');
+            } else {
+                // 1. Create auth user
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: formData.email,
+                    password: formData.password,
+                    options: {
+                        emailRedirectTo: undefined,
+                        data: {
+                            name: formData.name,
+                            role: 'tenant'
+                        }
+                    }
+                });
+
+                if (authError) throw authError;
+                if (!authData.user) throw new Error('Failed to create user');
+                userId = authData.user.id;
+
+                // 2. Create user record in users table
+                const emergencyContact = formData.emergencyContactName ? {
+                    name: formData.emergencyContactName,
+                    phone: formData.emergencyContactPhone,
+                    relation: formData.emergencyContactRelation
+                } : null;
+
+                const userData = {
+                    uid: userId,
+                    email: formData.email,
+                    name: formData.name,
+                    phone: formData.phone,
+                    role: 'tenant',
+                    society_id: societyId,
+                    flat_ids: [formData.flatId],
+                    move_in_date: formData.moveInDate || null,
+                    emergency_contact: emergencyContact,
+                    status: 'active'
+                };
+
+                const { error: userError } = await supabase
+                    .from('users')
+                    .insert([userData]);
+
+                if (userError) throw userError;
+                toast.success('New tenant added successfully!');
+            }
+
+            // 3. Update flat occupancy status (for both new and existing)
             const { error: flatError } = await supabase
                 .from('flats')
                 .update({
                     occupancy_status: 'rented',
-                    tenant_id: authData.user.id
+                    tenant_id: userId
                 })
                 .eq('id', formData.flatId);
 
             if (flatError) throw flatError;
 
-            toast.success('Tenant added successfully!');
             onSuccess();
             onClose();
             resetForm();
