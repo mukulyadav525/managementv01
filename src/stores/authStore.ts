@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   signUp: async (email: string, password: string, userData: Partial<User> & { societyName?: string }) => {
     try {
       set({ loading: true, error: null });
-      console.log('authStore: [SIGNUP] Starting resetup process for:', email);
+      console.log('authStore: [SIGNUP] Starting registration for:', email);
 
       // 1. Auth Signup
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -73,25 +73,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
 
-      if (authError) {
-        set({ loading: false });
-        throw authError;
-      }
+      if (authError) throw authError;
 
       if (!authData.user || !authData.session) {
-        set({ loading: false });
-        // Handling the "Email Confirmation" case as a success but with a specific state
         if (!authData.session && authData.user) {
-          throw new Error('Email confirmation required. Please disable it in Supabase for seeding to work.');
+          throw new Error('Email confirmation required. Please disable it in Supabase settings.');
         }
-        throw new Error('Signup failed: No user or session. Check your Supabase settings.');
+        throw new Error('Signup failed: No session returned. Check Supabase configuration.');
       }
 
       const uid = authData.user.id;
       let societyId = userData.societyId || '';
 
-      // 2. Create User Profile IMMEDIATELY (Profile-First Strategy)
-      // This ensures the user can login even if seeding fails
+      // 2. Create User Profile
       const newUser: User = {
         uid: uid,
         email,
@@ -105,22 +99,20 @@ export const useAuthStore = create<AuthState>((set) => ({
         updatedAt: new Date().toISOString() as any,
       };
 
-      console.log('authStore: [SIGNUP] Creating user profile for UID:', uid);
+      console.log('authStore: [SIGNUP] Creating profile for UID:', uid);
       const { error: dbError } = await supabase
         .from('users')
         .insert([toSnake(newUser)]);
 
       if (dbError) {
-        console.error('authStore: [SIGNUP] Profile insertion error:', dbError.message, dbError.code);
-        set({ loading: false });
-        throw new Error(`Critical: Profile creation failed. Please try again. (${dbError.message})`);
+        console.error('authStore: [SIGNUP] Profile creation error:', dbError);
+        throw new Error(`Profile creation failed: ${dbError.message}`);
       }
 
-      // 3. Admin Flow: Society Creation (No Seeding)
+      // 3. Admin Flow: Society Creation
       if (userData.role === 'admin' && userData.societyName) {
-        console.log('authStore: [SIGNUP] Creating new society:', userData.societyName);
+        console.log('authStore: [SIGNUP] Setting up new society:', userData.societyName);
 
-        // Generate a random ID for society
         societyId = userData.societyName.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 7);
 
         const newSociety = {
@@ -132,20 +124,32 @@ export const useAuthStore = create<AuthState>((set) => ({
         };
 
         const { error: socError } = await supabase.from('societies').insert([newSociety]);
-        if (socError) throw socError;
+        if (socError) {
+          console.error('authStore: [SIGNUP] Society creation error:', socError);
+          throw socError;
+        }
 
-        // Update user's society_id now that we have it
-        await supabase.from('users').update({ society_id: societyId }).eq('uid', uid);
+        // Link user to society
+        console.log('authStore: [SIGNUP] Linking admin to society:', societyId);
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ society_id: societyId })
+          .eq('uid', uid);
+
+        if (updateError) {
+          console.error('authStore: [SIGNUP] Admin linking error:', updateError);
+          throw updateError;
+        }
+
         newUser.societyId = societyId;
-
-        console.log('authStore: [SIGNUP] Society created with ID:', societyId);
       }
 
+      // Final successfully registration state
       set({ user: newUser, loading: false });
-      console.log('authStore: [SIGNUP] Registration complete for UID:', uid);
+      console.log('authStore: [SIGNUP] Process complete for:', uid);
 
     } catch (error: any) {
-      console.error('authStore: [SIGNUP] Error:', error);
+      console.error('authStore: [SIGNUP] Critical error:', error);
       set({ error: error.message, loading: false });
       throw error;
     }
