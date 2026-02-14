@@ -31,6 +31,16 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
         emergencyContactRelation: ''
     });
     const [loading, setLoading] = useState(false);
+    const [selectedFloor, setSelectedFloor] = useState<string>('');
+
+    // derived state for filtering
+    const uniqueFloors = Array.from(new Set(ownedFlats.map(f => f.floor))).sort((a, b) => a - b);
+
+    const filteredFlats = ownedFlats.filter(f => {
+        const isVacantOrOwner = f.occupancyStatus === 'vacant' || f.occupancyStatus === 'owner-occupied';
+        const matchesFloor = selectedFloor ? f.floor.toString() === selectedFloor : true;
+        return isVacantOrOwner && matchesFloor;
+    });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -192,23 +202,42 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                         required
                     />
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Select Flat <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            value={formData.flatId}
-                            onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
-                            required
-                        >
-                            <option value="">Choose a flat</option>
-                            {ownedFlats.filter(f => f.occupancyStatus === 'vacant' || f.occupancyStatus === 'owner-occupied').map((flat) => (
-                                <option key={flat.id} value={flat.id}>
-                                    Flat {flat.flatNumber} - {flat.bhkType} (Floor {flat.floor})
-                                </option>
-                            ))}
-                        </select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Filter by Floor
+                            </label>
+                            <select
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                value={selectedFloor}
+                                onChange={(e) => setSelectedFloor(e.target.value)}
+                            >
+                                <option value="">All Floors</option>
+                                {uniqueFloors.map((floor) => (
+                                    <option key={floor} value={floor}>
+                                        Floor {floor}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Select Flat <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                value={formData.flatId}
+                                onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
+                                required
+                            >
+                                <option value="">Choose a flat</option>
+                                {filteredFlats.map((flat) => (
+                                    <option key={flat.id} value={flat.id}>
+                                        Flat {flat.flatNumber} - {flat.bhkType} (Floor {flat.floor})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     <Input
