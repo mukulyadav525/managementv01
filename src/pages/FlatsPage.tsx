@@ -25,11 +25,18 @@ export const FlatsPage: React.FC = () => {
         if (!user?.societyId) return;
         try {
             setLoading(true);
-            console.log('FlatsPage: Loading flats for societyId:', user.societyId);
-            const data = await SocietyService.getFlats(user.societyId);
+            let data;
+            if (user.role === 'owner') {
+                console.log('FlatsPage: Loading owned flats for:', user.uid);
+                data = await SocietyService.getOwnedFlats(user.uid);
+            } else {
+                console.log('FlatsPage: Loading all flats for societyId:', user.societyId);
+                data = await SocietyService.getFlats(user.societyId);
+            }
             console.log('FlatsPage: Fetched flats:', data.length);
             setFlats(data as Flat[]);
         } catch (error) {
+            console.error('Error loading flats:', error);
             toast.error('Failed to load flats');
         } finally {
             setLoading(false);
@@ -90,8 +97,12 @@ export const FlatsPage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Flat Management</h1>
-                        <p className="text-gray-600 mt-1">Manage all properties in the society</p>
+                        <h1 className="text-3xl font-bold text-gray-900">
+                            {user?.role === 'owner' ? 'My Flats' : 'Flat Management'}
+                        </h1>
+                        <p className="text-gray-600 mt-1">
+                            {user?.role === 'owner' ? 'View your allotted flats' : 'Manage all properties in the society'}
+                        </p>
                     </div>
                     {user?.role === 'admin' && (
                         <Button onClick={() => { setEditingFlat(null); setShowModal(true); }}>
