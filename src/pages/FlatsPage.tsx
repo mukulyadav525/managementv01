@@ -160,7 +160,9 @@ export const FlatsPage: React.FC = () => {
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Floor</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                                        <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        {user?.role === 'admin' && (
+                                            <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -172,17 +174,21 @@ export const FlatsPage: React.FC = () => {
                                             <td className="px-6 py-4">
                                                 <span className={`px-2 py-1 rounded text-xs font-medium ${flat.occupancyStatus === 'vacant' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
                                                     }`}>
-                                                    {flat.occupancyStatus}
+                                                    {flat.occupancyStatus === 'owner-occupied' ? 'Owner Occupied' :
+                                                        flat.occupancyStatus === 'rented' ? 'Tenant Occupied' :
+                                                            'Vacant'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 space-x-2">
-                                                <button onClick={() => { setEditingFlat(flat); setShowModal(true); }} className="text-blue-600 hover:text-blue-800">
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button onClick={() => handleDeleteFlat(flat.id)} className="text-red-600 hover:text-red-800">
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </td>
+                                            {user?.role === 'admin' && (
+                                                <td className="px-6 py-4 space-x-2">
+                                                    <button onClick={() => { setEditingFlat(flat); setShowModal(true); }} className="text-blue-600 hover:text-blue-800">
+                                                        <Edit2 size={18} />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteFlat(flat.id)} className="text-red-600 hover:text-red-800">
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>
