@@ -39,7 +39,7 @@ export const OwnerDashboardPage: React.FC = () => {
     }, [user]);
 
     const loadDashboardData = async () => {
-        if (!user?.societyId || !user?.flatIds) {
+        if (!user?.societyId || !user?.uid) {
             setLoading(false);
             return;
         }
@@ -51,9 +51,10 @@ export const OwnerDashboardPage: React.FC = () => {
             const buildingsData = await SocietyService.getBuildings(user.societyId);
             const buildingMap = new Map(buildingsData.map((b: any) => [b.id, b.name]));
 
-            // Load owner's flats
-            const allFlats = await SocietyService.getFlats(user.societyId);
-            const ownerFlats = allFlats.filter((f: any) => user.flatIds.includes(f.id));
+            // Load owner's flats directly using uid
+            console.log('OwnerDashboard: Fetching flats for owner:', user.uid);
+            const ownerFlats = await SocietyService.getOwnedFlats(user.uid);
+            console.log('OwnerDashboard: Found flats:', ownerFlats);
 
             // Enrich flats with building name
             const enrichedFlats = ownerFlats.map((f: any) => ({
