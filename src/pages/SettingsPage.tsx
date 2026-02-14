@@ -22,11 +22,14 @@ export const SettingsPage: React.FC = () => {
 
     const loadSociety = async () => {
         if (!user?.societyId) return;
+        console.log('Loading society settings for:', user.societyId); // Debug
         try {
             setLoading(true);
             const data = await SocietyService.getSociety(user.societyId);
+            console.log('Loaded society data:', data); // Debug
             setSociety(data as Society);
         } catch (error) {
+            console.error('Error loading society:', error); // Debug
             toast.error('Failed to load society settings');
         } finally {
             setLoading(false);
@@ -36,6 +39,8 @@ export const SettingsPage: React.FC = () => {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!society || !user?.societyId) return;
+
+        console.log('Saving society settings:', society); // Debug
 
         try {
             setSaving(true);
@@ -47,9 +52,13 @@ export const SettingsPage: React.FC = () => {
                 }))
                 .eq('id', user.societyId);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase update error:', error); // Debug
+                throw error;
+            }
             toast.success('Settings updated successfully');
         } catch (error) {
+            console.error('Save settings exception:', error); // Debug
             toast.error('Failed to update settings');
         } finally {
             setSaving(false);
