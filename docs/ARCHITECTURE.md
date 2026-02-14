@@ -18,7 +18,7 @@ A comprehensive, production-ready web application for managing residential socie
 
 ### Tech Stack
 - **Frontend**: React 18 + TypeScript + Tailwind CSS
-- **Backend**: Firebase (Authentication, Firestore, Storage, Functions)
+- **Backend**: Supabase (Authentication, PostgreSQL, Storage, Edge Functions)
 - **State Management**: Zustand
 - **Routing**: React Router v6
 - **Build Tool**: Vite
@@ -41,10 +41,10 @@ A comprehensive, production-ready web application for managing residential socie
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Firebase Services                         │
+│                    Supabase Services                         │
 ├─────────────────────────────────────────────────────────────┤
-│  • Authentication     • Firestore DB    • Cloud Storage     │
-│  • Cloud Functions    • Hosting         • Analytics         │
+│  • Authentication     • PostgreSQL DB    • Storage          │
+│  • Edge Functions     • Real-time        • Analytics         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,7 +70,7 @@ src/
 │   ├── VisitorsPage.tsx
 │   ├── PaymentsPage.tsx
 │   └── ComplaintsPage.tsx
-├── services/            # API & Firebase services
+├── services/            # API & Supabase services
 ├── stores/              # State management (Zustand)
 ├── types/               # TypeScript definitions
 └── config/              # Configuration files
@@ -497,7 +497,7 @@ allow update: if ownsFlat(resource.data.flatId);
 - ✅ Lazy loading of routes
 - ✅ Image optimization
 - ✅ Code splitting
-- ✅ Firebase query limits
+- ✅ Supabase query limits
 - ✅ Caching strategies
 
 ### Planned Optimizations
@@ -511,7 +511,7 @@ allow update: if ownsFlat(resource.data.flatId);
 
 ## Monitoring & Analytics
 
-### Firebase Analytics
+### Supabase Analytics
 - User engagement
 - Feature usage
 - Error tracking
@@ -539,7 +539,7 @@ allow update: if ownsFlat(resource.data.flatId);
 - E2E tests (planned)
 
 ### Deployment
-- Automated via Firebase CLI
+- Automated via Vercel / Netlify
 - CI/CD pipeline (planned)
 - Staging environment (planned)
 
@@ -551,7 +551,7 @@ allow update: if ownsFlat(resource.data.flatId);
 
 **Built with:**
 - React Team
-- Firebase Team
+- Supabase Team
 - Tailwind CSS
 - Open Source Community
 

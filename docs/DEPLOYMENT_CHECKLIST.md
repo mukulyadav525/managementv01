@@ -4,15 +4,14 @@ Use this checklist before deploying to production.
 
 ## Pre-Deployment Checklist
 
-### ✅ Firebase Configuration
+### ✅ Supabase Configuration
 
-- [ ] Firebase project created in production mode
-- [ ] Billing enabled (if needed)
-- [ ] Firestore database in production mode
+- [ ] Supabase project created
+- [ ] Database schema deployed via Migrations
+- [ ] RLS policies verified for all tables
 - [ ] Authentication providers enabled
-- [ ] Storage bucket configured
-- [ ] Security rules deployed and tested
-- [ ] Backup strategy in place
+- [ ] Storage buckets created (images, documents)
+- [ ] Database backups configured
 
 ### ✅ Environment Setup
 
@@ -103,34 +102,20 @@ npm run preview
 - [ ] All pages load correctly
 - [ ] All features work as expected
 
-### Step 2: Firebase Deployment
+### Step 2: Vercel Deployment
 
 ```bash
-# Login
-firebase login
+# Install Vercel CLI (optional)
+# npm install -g vercel
 
-# Select project
-firebase use production
-
-# Deploy everything
-firebase deploy
+# Deploy
+# vercel --prod
 ```
 
-**OR deploy selectively:**
-
-```bash
-# Deploy Firestore rules only
-firebase deploy --only firestore:rules
-
-# Deploy Storage rules only
-firebase deploy --only storage:rules
-
-# Deploy hosting only
-firebase deploy --only hosting
-
-# Deploy functions (if any)
-firebase deploy --only functions
-```
+**OR via GitHub (Recommended):**
+1. Connect your GitHub repository to Vercel.
+2. Add environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+3. Vercel will automatically deploy on every push to `main`.
 
 ### Step 3: Post-Deployment Verification
 
@@ -169,7 +154,7 @@ firebase deploy --only functions
 
 ### Step 4: Monitoring Setup
 
-**Enable Firebase Monitoring:**
+**Enable Database Monitoring:**
 - [ ] Performance monitoring active
 - [ ] Analytics tracking enabled
 - [ ] Crash reporting configured
@@ -185,7 +170,7 @@ firebase deploy --only functions
 
 ## Production Environment Configuration
 
-### Firebase Production Settings
+### Database Production Settings
 
 **Authentication:**
 ```
@@ -255,14 +240,13 @@ firebase deploy --only functions
 
 1. **Immediate Rollback:**
 ```bash
-# Firebase hosting supports rollback
-firebase hosting:clone SOURCE_SITE_ID:SOURCE_VERSION DESTINATION_SITE_ID
+# Vercel supports rollback via the dashboard
 ```
 
 2. **Database Rollback:**
 ```bash
 # Restore from backup (if needed)
-# Contact Firebase support for assistance
+# Contact Supabase support for assistance
 ```
 
 3. **Communication:**
@@ -387,8 +371,8 @@ firebase hosting:clone SOURCE_SITE_ID:SOURCE_VERSION DESTINATION_SITE_ID
 - Project Manager: +91 XXXXXXXXXX
 - Customer Success: +91 XXXXXXXXXX
 
-**Firebase Support:**
-- Email: firebase-support@google.com
+**Support:**
+- Supabase Support Dashboard
 - Priority Support: [If subscribed]
 
 ---

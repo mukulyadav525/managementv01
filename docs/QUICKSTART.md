@@ -10,50 +10,28 @@ cd society-management
 npm install
 ```
 
-### 2. Firebase Setup (2 minutes)
-1. Go to https://console.firebase.google.com/
+### 2. Supabase Setup (2 minutes)
+1. Go to https://supabase.com/dashboard
 2. Create new project
-3. Enable:
-   - ✅ Email/Password Authentication
-   - ✅ Firestore Database (production mode)
-   - ✅ Cloud Storage
-4. Copy your config from Project Settings
+   - Set a production password
+   - Choose your nearest region
+3. Go to **Settings > API** and copy:
+   - `Project URL`
+   - `anon` public API key
 
-### 3. Configure Firebase
-Open `src/config/firebase.ts` and replace:
-```typescript
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+### 3. Configure Environment
+Create a `.env` file in the root and add:
+```env
+VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
-### 4. Deploy Security Rules
-```bash
-# Install Firebase CLI
-npm install -g firebase-tools
-
-# Login
-firebase login
-
-# Initialize
-firebase init
-# Select: Firestore, Storage
-# Use existing project
-# Keep default file names
-
-# Deploy rules
-firebase deploy --only firestore:rules
-firebase deploy --only storage:rules
-```
+### 4. Database Setup
+Go to the **SQL Editor** in Supabase and run the scripts found in `supabase/migrations/` to set up your tables and RLS policies.
 
 ### 5. Create Initial Data
 
-**In Firebase Console > Firestore:**
+**In Supabase Dashboard > Table Editor:**
 
 1. Create collection `societies` with document `society_1`:
 ```json
@@ -68,7 +46,7 @@ firebase deploy --only storage:rules
   "totalBuildings": 4,
   "contactEmail": "admin@test.com",
   "contactPhone": "+91 1234567890",
-  "createdAt": [Use Firebase Timestamp.now()]
+  "createdAt": [Use current ISO timestamp]
 }
 ```
 
@@ -98,7 +76,7 @@ Go to `http://localhost:3000` and login!
 
 ## 📱 Default Test Accounts
 
-After setup, create these users in Firebase Authentication:
+After setup, create these users in Supabase Authentication:
 
 | Role | Email | Password |
 |------|-------|----------|

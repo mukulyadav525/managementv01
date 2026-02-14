@@ -18,152 +18,53 @@ Before you begin, ensure you have:
 - ✅ **Node.js** (v16 or higher) - [Download](https://nodejs.org/)
 - ✅ **npm** (comes with Node.js) or **yarn**
 - ✅ **Git** - [Download](https://git-scm.com/)
-- ✅ **Google Account** (for Firebase)
+- ✅ **GitHub Account**
 - ✅ **Code Editor** (VS Code recommended)
 - ✅ **Firebase CLI** (we'll install this)
 
 ---
 
-## Firebase Project Setup
+## Supabase Project Setup
 
-### Step 1: Create Firebase Project
+### Step 1: Create Supabase Project
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click **"Add project"** or **"Create a project"**
-3. Enter project name: `society-management` (or your choice)
-4. Enable/Disable Google Analytics (your choice)
-5. Click **"Create project"**
-6. Wait for project creation to complete
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+2. Click **"New Project"**
+3. Enter project name: `society-management`
+4. Set a strong database password
+5. Choose a region closest to your users
+6. Click **"Create new project"**
 
-### Step 2: Register Web App
+### Step 2: Get API Keys
 
-1. In Firebase Console, click the **web icon** `</>`
-2. Register app nickname: `Society Manager Web`
-3. Check **"Also set up Firebase Hosting"**
-4. Click **"Register app"**
-5. **IMPORTANT**: Copy the Firebase configuration object shown
-6. Click **"Continue to console"**
+1. From the project dashboard, click **"Settings"** (gear icon)
+2. Click **"API"**
+3. Copy the **Project URL** and the **`anon` public API key**
 
-### Step 3: Enable Authentication
+### Step 3: Local Development Setup
 
-1. In left sidebar, click **"Authentication"**
-2. Click **"Get started"**
-3. Click **"Email/Password"** under Sign-in methods
-4. **Enable** Email/Password
-5. Click **"Save"**
-
-### Step 4: Create Firestore Database
-
-1. In left sidebar, click **"Firestore Database"**
-2. Click **"Create database"**
-3. Select **"Start in production mode"**
-4. Choose a location (closest to your users)
-5. Click **"Enable"**
-
-### Step 5: Enable Cloud Storage
-
-1. In left sidebar, click **"Storage"**
-2. Click **"Get started"**
-3. Click **"Next"** (keep production mode)
-4. Select same location as Firestore
-5. Click **"Done"**
-
-### Step 6: Set up Firebase Hosting
-
-1. In left sidebar, click **"Hosting"**
-2. Click **"Get started"**
-3. Install Firebase CLI (see next section)
-
----
-
-## Local Development Setup
-
-### Step 1: Install Firebase CLI
-
-```bash
-npm install -g firebase-tools
-```
-
-Verify installation:
-```bash
-firebase --version
-```
-
-### Step 2: Clone and Install
-
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd society-management
-
-# Install dependencies
-npm install
-```
-
-### Step 3: Configure Firebase
-
-1. Create `.env` file in project root:
+1. Create a `.env` file in the project root:
 ```bash
 cp .env.example .env
 ```
 
-2. Open `.env` and add your Firebase config:
+2. Open `.env` and add your Supabase credentials:
 ```env
-VITE_FIREBASE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=123456789012
-VITE_FIREBASE_APP_ID=1:123456789012:web:abcdef123456
-VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+VITE_SUPABASE_URL=YOUR_PROJECT_URL
+VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 ```
 
-3. Update `src/config/firebase.ts` to use environment variables:
+### Step 4: Database Setup (SQL Editor)
 
-```typescript
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-};
-```
+Instead of manual collection creation, use the SQL scripts provided in `supabase/migrations/`. 
 
-### Step 4: Login to Firebase
-
-```bash
-firebase login
-```
-
-### Step 5: Initialize Firebase in Project
-
-```bash
-firebase init
-```
-
-Select:
-- ✅ Firestore
-- ✅ Hosting
-- ✅ Storage
-
-Follow prompts:
-- Use existing project: Select your project
-- Firestore rules: `firestore.rules`
-- Firestore indexes: `firestore.indexes.json`
-- Public directory: `dist`
-- Single-page app: **Yes**
-- GitHub deploys: **No** (for now)
-- Storage rules: `storage.rules`
-
-### Step 6: Deploy Security Rules
-
-```bash
-firebase deploy --only firestore:rules
-firebase deploy --only storage:rules
-```
+1. Go to the **SQL Editor** in the Supabase sidebar.
+2. Click **"New Query"**.
+3. Paste and run the scripts from the migrations folder in order to set up:
+   - Users table & RLS
+   - Societies & Flats
+   - Complaints, Payments, Visitors
+   - Storage Buckets & Policies
 
 ---
 
@@ -206,7 +107,7 @@ updatedAt: [Click "Current timestamp"]
 #### Create Admin User
 
 1. First, register via the app at `/login` > Register
-2. Or use Firebase Console > Authentication > Add user
+2. Or use Supabase Dashboard > Authentication > Users
    - Email: admin@sunshine.com
    - Password: Admin@123
 
@@ -256,7 +157,7 @@ Create more flats by duplicating and changing values.
 Create `scripts/seed.js`:
 
 ```javascript
-const admin = require('firebase-admin');
+// Use Supabase client for scripting
 const serviceAccount = require('./serviceAccountKey.json');
 
 admin.initializeApp({
@@ -341,22 +242,14 @@ This creates optimized files in `dist/` folder.
 npm run preview
 ```
 
-### Step 3: Deploy to Firebase Hosting
+### Step 3: Deployment
 
-```bash
-firebase deploy --only hosting
-```
-
-Your app will be live at:
-```
-https://YOUR_PROJECT_ID.web.app
-https://YOUR_PROJECT_ID.firebaseapp.com
-```
+Deploy your application to Vercel or Netlify.
 
 ### Step 4: Custom Domain (Optional)
 
-1. Go to Firebase Console > Hosting
-2. Click "Add custom domain"
+1. Go to your hosting provider's dashboard.
+2. Follow their "Custom Domain" setup.
 3. Follow verification steps
 4. Add DNS records to your domain provider
 
@@ -364,31 +257,31 @@ https://YOUR_PROJECT_ID.firebaseapp.com
 
 ## Troubleshooting
 
-### Issue: Firebase Config Error
+### Issue: API Config Error
 
-**Error**: "Firebase: Error (auth/invalid-api-key)"
+**Error**: "Invalid API key" or connection failure
 
 **Solution**: 
-- Verify Firebase config in `.env` file
-- Ensure all values are correct
-- Check for extra spaces or quotes
+- Verify Supabase config in `.env` or Vercel Environment Variables.
+- Ensure all values are correct.
+- Check for extra spaces or quotes.
 
 ### Issue: Permission Denied
 
 **Error**: "Missing or insufficient permissions"
 
 **Solution**:
-- Deploy Firestore rules: `firebase deploy --only firestore:rules`
-- Check user document has correct `societyId`
-- Verify user role is set correctly
+- Run the migration scripts in the SQL Editor.
+- Check user document has correct `societyId`.
+- Verify user role is set correctly.
 
 ### Issue: Images Not Uploading
 
 **Error**: Storage upload fails
 
 **Solution**:
-- Deploy storage rules: `firebase deploy --only storage:rules`
-- Check Firebase Storage is enabled
+- Ensure storage buckets are created in Supabase.
+- Check RLS policies for storage buckets.
 - Verify file size is under 5MB
 
 ### Issue: Build Fails
@@ -438,7 +331,7 @@ After successful setup:
 
 ## Support & Resources
 
-- 📚 [Firebase Documentation](https://firebase.google.com/docs)
+- 📚 [Supabase Documentation](https://supabase.com/docs)
 - 📚 [React Documentation](https://react.dev)
 - 📚 [Tailwind CSS Docs](https://tailwindcss.com/docs)
 - 🐛 [Report Issues](https://github.com/your-repo/issues)
@@ -455,22 +348,7 @@ After successful setup:
 Use this checklist to track your setup:
 
 - [ ] Node.js installed
-- [ ] Firebase project created
-- [ ] Web app registered in Firebase
-- [ ] Authentication enabled
-- [ ] Firestore database created
-- [ ] Storage enabled
-- [ ] Firebase CLI installed
-- [ ] Project cloned
-- [ ] Dependencies installed
-- [ ] .env file configured
-- [ ] Firebase initialized
-- [ ] Security rules deployed
-- [ ] Society document created
-- [ ] Admin user created
-- [ ] Sample flats added
-- [ ] Dev server tested
-- [ ] Production build successful
-- [ ] Deployed to Firebase Hosting
+- [ ] Database backups configured
+- [ ] Deployed to Vercel/Netlify
 
 🎉 **Congratulations!** Your Society Management System is ready!

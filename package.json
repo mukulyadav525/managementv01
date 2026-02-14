@@ -29,7 +29,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview",
-    "deploy": "firebase deploy"
+    "preview": "vite preview"
   }
 }

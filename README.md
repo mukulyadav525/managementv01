@@ -1,6 +1,6 @@
 # 🏢 Smart Society & Rental Management System
 
-A comprehensive web-based platform for managing apartments, societies, landlords, tenants, and residents. Built with React, TypeScript, and Firebase.
+A comprehensive web-based platform for managing apartments, societies, landlords, tenants, and residents. Built with React, TypeScript, and Supabase.
 
 ## ✨ Features
 
@@ -56,12 +56,11 @@ A comprehensive web-based platform for managing apartments, societies, landlords
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand
 - **Routing**: React Router v6
-- **Backend**: Firebase
+- **Backend**: Supabase
   - Authentication
-  - Cloud Firestore (Database)
-  - Cloud Storage (File uploads)
-  - Cloud Functions (Automation)
-  - Hosting
+  - PostgreSQL Database
+  - Edge Functions
+  - Storage (File uploads)
 - **UI Components**: Lucide React Icons
 - **Charts**: Recharts
 - **Forms**: React Hook Form
@@ -72,9 +71,9 @@ A comprehensive web-based platform for managing apartments, societies, landlords
 ## 📦 Installation
 
 ### Prerequisites
-- Node.js (v16 or higher)
+- Node.js (v18 or higher)
 - npm or yarn
-- Firebase account
+- Supabase account
 
 ### Step 1: Clone the Repository
 ```bash
@@ -87,46 +86,28 @@ cd society-management
 npm install
 ```
 
-### Step 3: Firebase Setup
+### Step 3: Supabase Setup
 
-1. **Create a Firebase Project**
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Click "Add Project"
+1. **Create a Supabase Project**
+   - Go to [Supabase Dashboard](https://supabase.com/dashboard)
+   - Click "New Project"
    - Follow the setup wizard
 
-2. **Enable Firebase Services**
-   - **Authentication**: Enable Email/Password sign-in
-   - **Firestore Database**: Create database in production mode
-   - **Storage**: Enable Cloud Storage
-   - **Hosting**: Set up hosting (optional for deployment)
+2. **Get API Keys**
+   - Go to Project Settings > API
+   - Copy the `Project URL` and `anon` public key
 
-3. **Get Firebase Configuration**
-   - Go to Project Settings > General
-   - Scroll to "Your apps" section
-   - Click web icon (</>) to add a web app
-   - Copy the configuration object
+3. **Update Environment Variables**
+   - Create a `.env` file in the root
+   - Add your Supabase credentials:
 
-4. **Update Firebase Config**
-   - Open `src/config/firebase.ts`
-   - Replace the configuration with your Firebase credentials:
-
-```typescript
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID"
-};
+```env
+VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
-### Step 4: Deploy Firestore Rules
-```bash
-firebase deploy --only firestore:rules
-firebase deploy --only storage:rules
-```
+### Step 4: Run Migrations
+Run the SQL scripts in `supabase/migrations/` using the Supabase SQL Editor to set up your database schema and RLS policies.
 
 ### Step 5: Create Initial Data
 
@@ -156,11 +137,13 @@ Fields:
 2. **Create Test User**
 ```
 Collection: users
-Document ID: <use Firebase Auth UID>
-Fields:
+Document ID: <use Supabase User ID>
+
+```json
 {
-  uid: "<Firebase Auth UID>",
-  email: "admin@society.com",
+  "uid": "<Supabase User ID>",
+  "email": "admin@society.com",
+```
   name: "Admin User",
   phone: "+91 9876543210",
   role: "admin",
@@ -209,7 +192,7 @@ npm run preview
 
 ## 🔐 Default Login Credentials
 
-After setting up Firebase Authentication, create test users:
+After setting up Supabase Authentication, create test users:
 
 - **Admin**: admin@society.com / password123
 - **Owner**: owner@society.com / password123
@@ -228,7 +211,7 @@ society-management/
 │   │   ├── auth/         # Authentication components
 │   │   └── ...           # Feature-specific components
 │   ├── config/           # Configuration files
-│   │   └── firebase.ts   # Firebase configuration
+│   │   └── supabase.ts   # Supabase configuration
 │   ├── pages/            # Page components
 │   │   ├── LoginPage.tsx
 │   │   ├── DashboardPage.tsx
@@ -236,7 +219,7 @@ society-management/
 │   │   ├── PaymentsPage.tsx
 │   │   └── ComplaintsPage.tsx
 │   ├── services/         # API services
-│   │   └── firebase.service.ts
+│   │   └── supabase.service.ts
 │   ├── stores/           # State management (Zustand)
 │   │   └── authStore.ts
 │   ├── types/            # TypeScript types
@@ -245,7 +228,7 @@ society-management/
 │   ├── App.tsx           # Main app component
 │   ├── main.tsx          # Entry point
 │   └── index.css         # Global styles
-├── firebase.json          # Firebase configuration
+├── supabase/              # Supabase migrations and config
 ├── firestore.rules       # Firestore security rules
 ├── storage.rules         # Storage security rules
 ├── package.json
@@ -263,23 +246,16 @@ The application includes comprehensive Firestore and Storage security rules:
 - **Flat ownership validation**
 - **Society membership verification**
 
-## 🌐 Deployment to Firebase Hosting
+## 🌐 Deployment to Vercel
 
-```bash
-# Login to Firebase
-firebase login
+The easiest way to deploy is to connect your GitHub repository to Vercel.
 
-# Initialize Firebase (if not done)
-firebase init
+1. Push your code to GitHub.
+2. Import the project in Vercel.
+3. Add environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+4. Vercel will automatically build and deploy.
 
-# Build the project
-npm run build
-
-# Deploy to Firebase Hosting
-firebase deploy --only hosting
-```
-
-Your app will be live at: `https://YOUR_PROJECT_ID.web.app`
+Your app will be live at: `https://your-project.vercel.app`
 
 ## 📱 Future Enhancements
 
@@ -321,7 +297,7 @@ For support, email: support@societymanager.com
 ## 🙏 Acknowledgments
 
 - React Team
-- Firebase Team
+- Supabase Team
 - Tailwind CSS
 - Open source community
 
