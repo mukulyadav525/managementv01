@@ -140,6 +140,15 @@ export const Sidebar: React.FC = () => {
           <span className="font-medium">Logout</span>
         </button>
       </div>
+      {/* Footer */}
+      <div className="p-6 border-t border-slate-800 text-center">
+        <p className="text-xs text-slate-500">
+          Made with ❤️ by <span className="text-primary-400 font-medium">Mukul</span>
+        </p>
+        <p className="text-[10px] text-slate-600 mt-1">
+          © {new Date().getFullYear()} All Rights Reserved
+        </p>
+      </div>
     </div>
   );
 };

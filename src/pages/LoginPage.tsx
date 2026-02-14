@@ -105,6 +105,16 @@ export const LoginPage: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-500">
+            Made with ❤️ by <span className="text-primary-600 font-medium">Mukul</span>
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            © {new Date().getFullYear()} Society Manager. All Rights Reserved.
+          </p>
+        </div>
       </div>
     </div>
   );
