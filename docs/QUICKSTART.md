@@ -125,11 +125,11 @@ Your app will be live at: `https://YOUR_PROJECT.web.app`
 ## 🆘 Common Issues
 
 **Login not working?**
-- Check Firebase Auth is enabled
-- Verify user document exists in Firestore
+- Check Supabase Auth is enabled.
+- Verify user document exists in `users` table.
 
 **Permission errors?**
-- Deploy Firestore rules: `firebase deploy --only firestore:rules`
+- Ensure RLS policies are active and correctly assigned.
 
 **Build fails?**
 - Run `npm install` again
