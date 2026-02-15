@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuthStore();
+  const { signIn, signInWithGoogle } = useAuthStore();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -58,6 +58,25 @@ export const LoginPage: React.FC = () => {
 
         {/* Login Form */}
         <div className="bg-white rounded-lg shadow-xl p-8">
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full mb-6 flex items-center justify-center gap-2"
+            onClick={() => signInWithGoogle()}
+          >
+            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
+            Sign in with Google
+          </Button>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
               label="Email Address"
@@ -109,7 +128,7 @@ export const LoginPage: React.FC = () => {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            Made with ❤️ by <span className="text-primary-600 font-medium">Mukul</span>
+            Made with ❤️ by <span className="text-primary-600 font-medium">Mukul and Priya</span>
           </p>
           <p className="text-xs text-gray-400 mt-1">
             © {new Date().getFullYear()} Society Manager. All Rights Reserved.

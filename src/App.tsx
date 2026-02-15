@@ -7,6 +7,7 @@ import { getDashboardPath } from './utils/roleUtils';
 // Pages
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { CompleteProfilePage } from './pages/CompleteProfilePage';
 import { AdminDashboardPage } from './pages/dashboards/AdminDashboardPage';
 import { OwnerDashboardPage } from './pages/dashboards/OwnerDashboardPage';
 import { TenantDashboardPage } from './pages/dashboards/TenantDashboardPage';
@@ -34,7 +35,7 @@ import { RoleProtectedRoute } from './components/routing/RoleProtectedRoute';
 
 // Protected Route Component (for basic auth check)
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuthStore();
+  const { user, loading, needsCompletion } = useAuthStore();
 
   if (loading) {
     return (
@@ -49,6 +50,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompletion) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   return <>{children}</>;
@@ -56,7 +61,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 // Smart Dashboard Redirect - redirects to role-specific dashboard
 const DashboardRedirect: React.FC = () => {
-  const { user, loading } = useAuthStore();
+  const { user, loading, needsCompletion } = useAuthStore();
 
   if (loading) {
     return (
@@ -71,6 +76,10 @@ const DashboardRedirect: React.FC = () => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (needsCompletion) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   const dashboardPath = getDashboardPath(user.role);
@@ -115,6 +124,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/complete-profile" element={<CompleteProfilePage />} />
 
         {/* Role-Specific Dashboard Routes */}
         <Route

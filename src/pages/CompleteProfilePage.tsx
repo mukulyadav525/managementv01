@@ -1,42 +1,47 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { UserCircle } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/config/supabase';
 import { Button, Input } from '@/components/common';
 import toast from 'react-hot-toast';
 
-export const RegisterPage: React.FC = () => {
+export const CompleteProfilePage: React.FC = () => {
     const navigate = useNavigate();
-    const { signUp, signInWithGoogle } = useAuthStore();
+    const { completeProfile } = useAuthStore();
+    const [loading, setLoading] = useState(false);
+    const [societies, setSocieties] = useState<any[]>([]);
 
+    // Form state
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
+        name: '', // Optional, pre-fill if possible
         phone: '',
         role: 'tenant' as any,
         societyName: '',
         societyId: ''
     });
-    const [societies, setSocieties] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
 
-    React.useEffect(() => {
+    useEffect(() => {
+        // Fetch societies for the dropdown
         const fetchSocieties = async () => {
             const { data, error } = await supabase.from('societies').select('id, name');
             if (!error && data) setSocieties(data);
         };
         fetchSocieties();
+
+        // Check if we can get user metadata to pre-fill name
+        const getUserData = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.user_metadata?.full_name) {
+                setFormData(prev => ({ ...prev, name: user.user_metadata.full_name }));
+            }
+        };
+        getUserData();
+
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (formData.password !== formData.confirmPassword) {
-            return toast.error('Passwords do not match');
-        }
 
         if (formData.role === 'admin' && !formData.societyName) {
             return toast.error('Please provide a society name');
@@ -46,20 +51,25 @@ export const RegisterPage: React.FC = () => {
             return toast.error('Please select a society');
         }
 
+        if (!formData.phone) {
+            return toast.error('Please provide a phone number');
+        }
+
         setLoading(true);
         try {
-            await signUp(formData.email, formData.password, {
-                name: formData.name,
+            await completeProfile({
+                name: formData.name, // Use form name if edited, or pre-filled
                 phone: formData.phone,
                 role: formData.role,
                 societyId: formData.societyId,
                 societyName: formData.societyName
             });
 
-            toast.success('Registration and data seeding complete!');
-            navigate('/dashboard');
+            toast.success('Profile completed successfully!');
+            navigate('/dashboard'); // Auth store will update user, DashboardRedirect handles the rest
         } catch (error: any) {
-            toast.error(error.message);
+            console.error(error);
+            toast.error(error.message || 'Failed to complete profile');
         } finally {
             setLoading(false);
         }
@@ -71,49 +81,22 @@ export const RegisterPage: React.FC = () => {
                 {/* Logo & Title */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
-                        <Building2 className="text-white" size={32} />
+                        <UserCircle className="text-white" size={32} />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900">Society Manager</h1>
-                    <p className="text-gray-600 mt-2">Create your account</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Complete Profile</h1>
+                    <p className="text-gray-600 mt-2">We need a few more details to get you started.</p>
                 </div>
 
-                {/* Register Form */}
+                {/* Form */}
                 <div className="bg-white rounded-lg shadow-xl p-8">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        className="w-full mb-6 flex items-center justify-center gap-2"
-                        onClick={() => signInWithGoogle()}
-                    >
-                        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                        Sign up with Google
-                    </Button>
-
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Or register with email</span>
-                        </div>
-                    </div>
-
                     <form onSubmit={handleSubmit} className="space-y-4">
+
                         <Input
                             label="Full Name"
                             type="text"
                             placeholder="John Doe"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            required
-                        />
-
-                        <Input
-                            label="Email Address"
-                            type="email"
-                            placeholder="you@example.com"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             required
                         />
 
@@ -125,25 +108,6 @@ export const RegisterPage: React.FC = () => {
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             required
                         />
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <Input
-                                label="Password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                required
-                            />
-                            <Input
-                                label="Confirm Password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={formData.confirmPassword}
-                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                required
-                            />
-                        </div>
 
                         <div className="space-y-1">
                             <label className="block text-sm font-medium text-gray-700">Account Type</label>
@@ -191,20 +155,10 @@ export const RegisterPage: React.FC = () => {
                             className="w-full mt-6"
                             loading={loading}
                         >
-                            Register & Setup
+                            Complete Registration
                         </Button>
                     </form>
-
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600">
-                            Already have an account?{' '}
-                            <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-                                Log in here
-                            </Link>
-                        </p>
-                    </div>
                 </div>
-
                 {/* Footer */}
                 <div className="mt-8 text-center pb-8">
                     <p className="text-sm text-gray-500">
