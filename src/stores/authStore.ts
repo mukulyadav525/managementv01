@@ -15,6 +15,8 @@ interface AuthState {
   initializeAuth: () => void;
   setUser: (user: User | null) => void;
   needsCompletion: boolean;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
 }
 
 
@@ -275,4 +277,32 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 
   setUser: (user: User | null) => set({ user, loading: false, needsCompletion: false }),
+
+  resetPassword: async (email: string) => {
+    try {
+      set({ loading: true, error: null });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/update-password',
+      });
+      if (error) throw error;
+      set({ loading: false });
+    } catch (error: any) {
+      console.error('authStore: Reset password error:', error);
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  updatePassword: async (password: string) => {
+    try {
+      set({ loading: true, error: null });
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      set({ loading: false });
+    } catch (error: any) {
+      console.error('authStore: Update password error:', error);
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
 }));

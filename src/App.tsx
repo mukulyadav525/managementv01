@@ -12,6 +12,8 @@ import { AdminDashboardPage } from './pages/dashboards/AdminDashboardPage';
 import { OwnerDashboardPage } from './pages/dashboards/OwnerDashboardPage';
 import { TenantDashboardPage } from './pages/dashboards/TenantDashboardPage';
 import { SecurityDashboardPage } from './pages/dashboards/SecurityDashboardPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { StaffDashboardPage } from './pages/dashboards/StaffDashboardPage';
 import { VisitorsPage } from './pages/VisitorsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
@@ -125,6 +127,8 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/complete-profile" element={<CompleteProfilePage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/update-password" element={<ResetPasswordPage />} />
 
         {/* Role-Specific Dashboard Routes */}
         <Route
