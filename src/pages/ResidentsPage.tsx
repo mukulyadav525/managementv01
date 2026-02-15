@@ -299,7 +299,7 @@ export const ResidentsPage: React.FC = () => {
                                                             const flat = flats.find(f => f.id === fId);
                                                             return (
                                                                 <span key={fId} className="px-2 py-0.5 bg-primary-50 text-primary-700 rounded text-xs font-medium">
-                                                                    {flat ? `Flat ${flat.flatNumber || flat.flat_number}` : fId}
+                                                                    {flat ? `Flat ${flat.flatNumber || flat.flat_number} (Floor ${flat.floor})` : fId}
                                                                 </span>
                                                             );
                                                         })
