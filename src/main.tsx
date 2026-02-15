@@ -1,3 +1,4 @@
+console.log('Main.tsx: Script started executing');
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
