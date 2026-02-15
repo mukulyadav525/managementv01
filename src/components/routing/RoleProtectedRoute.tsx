@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { UserRole } from '@/types';
 import { getDashboardPath, canAccessRoute } from '@/utils/roleUtils';
@@ -14,6 +14,7 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     allowedRoles,
 }) => {
     const { user, loading } = useAuthStore();
+    const location = useLocation();
 
     // Show loading state while authentication is being checked
     if (loading) {
@@ -35,6 +36,14 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     // If user's role is not in allowed roles, redirect to their appropriate dashboard
     if (!canAccessRoute(user.role, allowedRoles)) {
         const correctDashboard = getDashboardPath(user.role);
+
+        // Prevent infinite redirect loop
+        if (location.pathname === correctDashboard) {
+            console.error('RoleProtectedRoute: Infinite redirect detected. Force signing out.');
+            useAuthStore.getState().signOut();
+            return <Navigate to="/login" replace />;
+        }
+
         return <Navigate to={correctDashboard} replace />;
     }
 

@@ -57,7 +57,17 @@ export const useAuthStore = create<AuthState>((set) => ({
           throw userError;
         } else if (userData) {
           console.log('authStore: Profile fetched successfully:', userData);
-          set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
+          const user = toCamel(userData) as User;
+
+          // Validate role
+          const validRoles = ['admin', 'owner', 'tenant', 'security', 'staff'];
+          if (!user.role || !validRoles.includes(user.role)) {
+            console.error('authStore: Invalid or missing role in profile:', user.role);
+            set({ user: null, loading: false, needsCompletion: true }); // Treat as incomplete to force profile update/fix
+            return;
+          }
+
+          set({ user, loading: false, needsCompletion: false });
         } else {
           console.warn('authStore: No profile data returned');
           set({ loading: false, needsCompletion: true });
