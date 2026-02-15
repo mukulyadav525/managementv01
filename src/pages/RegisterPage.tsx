@@ -208,7 +208,24 @@ export const RegisterPage: React.FC = () => {
                 {/* Footer */}
                 <div className="mt-8 text-center pb-8">
                     <p className="text-sm text-gray-500">
-                        Made with ❤️ by <span className="text-primary-600 font-medium">Mukul and Priya</span>
+                        Made with ❤️ by{' '}
+                        <a
+                            href="https://www.linkedin.com/in/mukulyadav525"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-600 font-medium hover:underline"
+                        >
+                            Mukul
+                        </a>{' '}
+                        and{' '}
+                        <a
+                            href="https://www.linkedin.com/in/priya-kyal-44bb69313"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary-600 font-medium hover:underline"
+                        >
+                            Priya
+                        </a>
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                         © {new Date().getFullYear()} Society Manager. All Rights Reserved.

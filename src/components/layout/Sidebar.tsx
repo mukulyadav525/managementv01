@@ -143,7 +143,24 @@ export const Sidebar: React.FC = () => {
       {/* Footer */}
       <div className="p-6 border-t border-slate-800 text-center">
         <p className="text-xs text-slate-500">
-          Made with ❤️ by <span className="text-primary-400 font-medium">Mukul</span>
+          Made with ❤️ by{' '}
+          <a
+            href="https://www.linkedin.com/in/mukulyadav525"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-400 font-medium hover:text-primary-300 hover:underline"
+          >
+            Mukul
+          </a>{' '}
+          and{' '}
+          <a
+            href="https://www.linkedin.com/in/priya-kyal-44bb69313"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-400 font-medium hover:text-primary-300 hover:underline"
+          >
+            Priya
+          </a>
         </p>
         <p className="text-[10px] text-slate-600 mt-1">
           © {new Date().getFullYear()} All Rights Reserved
