@@ -200,7 +200,7 @@ export const ResidentsPage: React.FC = () => {
                     .update({
                         [updateField]: residentUid,
                         occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied',
-                        ...(formData.role === 'tenant' ? { floor: parseInt(formData.floor) } : {})
+                        floor: parseInt(formData.floor)
                     })
                     .eq('id', flatId);
 
@@ -551,7 +551,7 @@ const ResidentModal: React.FC<{
                         </div>
                     )}
 
-                    {formData.role === 'tenant' && (
+                    {['owner', 'tenant'].includes(formData.role) && (
                         <div className="space-y-1">
                             <label className="block text-sm font-medium text-gray-700">Floor Number</label>
                             <input
