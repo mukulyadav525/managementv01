@@ -1,45 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Building, Edit2, Trash2, Home } from 'lucide-react';
+import { Plus, Building as BuildingIcon, Edit2, Trash2, Home } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal, Input } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { SocietyService, toSnake } from '@/services/supabase.service';
-import { Flat } from '@/types';
+import { Flat, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 
 export const FlatsPage: React.FC = () => {
     const { user } = useAuthStore();
     const [flats, setFlats] = useState<Flat[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingFlat, setEditingFlat] = useState<Flat | null>(null);
 
     useEffect(() => {
         if (user?.societyId) {
-            loadFlats();
+            loadInitialData();
         }
     }, [user]);
+
+    const loadInitialData = async () => {
+        if (!user?.societyId) return;
+        try {
+            setLoading(true);
+
+            // Parallel load flats and buildings
+            const [flatsData, buildingsData] = await Promise.all([
+                user.role === 'owner'
+                    ? SocietyService.getOwnedFlats(user.uid)
+                    : SocietyService.getFlats(user.societyId),
+                SocietyService.getBuildings(user.societyId)
+            ]);
+
+            setFlats(flatsData as Flat[]);
+            setBuildings(buildingsData as Building[]);
+        } catch (error) {
+            console.error('Error loading initial data:', error);
+            toast.error('Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadFlats = async () => {
         if (!user?.societyId) return;
         try {
-            setLoading(true);
             let data;
             if (user.role === 'owner') {
-                console.log('FlatsPage: Loading owned flats for:', user.uid);
                 data = await SocietyService.getOwnedFlats(user.uid);
             } else {
-                console.log('FlatsPage: Loading all flats for societyId:', user.societyId);
                 data = await SocietyService.getFlats(user.societyId);
             }
-            console.log('FlatsPage: Fetched flats:', data.length);
             setFlats(data as Flat[]);
         } catch (error) {
             console.error('Error loading flats:', error);
             toast.error('Failed to load flats');
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -115,7 +133,7 @@ export const FlatsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 flex items-center gap-4">
                         <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
-                            <Building size={24} />
+                            <BuildingIcon size={24} />
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Total Flats</p>
@@ -203,6 +221,7 @@ export const FlatsPage: React.FC = () => {
                         onClose={() => setShowModal(false)}
                         onSubmit={handleSaveFlat}
                         initialData={editingFlat}
+                        buildings={buildings}
                     />
                 )}
             </div>
@@ -215,8 +234,10 @@ const FlatModal: React.FC<{
     onClose: () => void;
     onSubmit: (data: any) => void;
     initialData?: Flat | null;
-}> = ({ isOpen, onClose, onSubmit, initialData }) => {
+    buildings: Building[];
+}> = ({ isOpen, onClose, onSubmit, initialData, buildings }) => {
     const [formData, setFormData] = useState({
+        buildingId: initialData?.buildingId || '',
         flatNumber: initialData?.flatNumber || '',
         floor: initialData?.floor ?? 1,
         bhkType: initialData?.bhkType || '2BHK',
@@ -224,14 +245,45 @@ const FlatModal: React.FC<{
         occupancyStatus: (initialData?.occupancyStatus || 'vacant') as any
     });
 
+    const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Specific floor validation based on building capacity
+        if (!formData.buildingId) {
+            return toast.error('Please select a building');
+        }
+
+        if (selectedBuilding) {
+            if (formData.floor < 1) {
+                return toast.error('Floor number must be at least 1');
+            }
+            if (formData.floor > selectedBuilding.totalFloors) {
+                return toast.error(`Invalid floor. Building ${selectedBuilding.name} only has ${selectedBuilding.totalFloors} floors.`);
+            }
+        }
+
         onSubmit(formData);
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={initialData ? 'Edit Flat' : 'Add New Flat'}>
             <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Building <span className="text-red-500">*</span></label>
+                    <select
+                        value={formData.buildingId}
+                        onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                        required
+                    >
+                        <option value="">Select Building</option>
+                        {buildings.map((b) => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                    </select>
+                </div>
                 <Input
                     label="Flat Number"
                     value={formData.flatNumber}
@@ -242,8 +294,9 @@ const FlatModal: React.FC<{
                     label="Floor"
                     type="number"
                     value={formData.floor}
-                    onChange={(e) => setFormData({ ...formData, floor: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, floor: parseInt(e.target.value) || 0 })}
                     required
+                    helperText={selectedBuilding ? `Max Floors for ${selectedBuilding.name}: ${selectedBuilding.totalFloors}` : ''}
                 />
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">BHK Type</label>
@@ -262,7 +315,7 @@ const FlatModal: React.FC<{
                     label="Area (sq ft)"
                     type="number"
                     value={formData.area}
-                    onChange={(e) => setFormData({ ...formData, area: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, area: parseInt(e.target.value) || 0 })}
                     required
                 />
                 <div>
@@ -274,7 +327,7 @@ const FlatModal: React.FC<{
                     >
                         <option value="vacant">Vacant</option>
                         <option value="owner-occupied">Owner Occupied</option>
-                        <option value="tenant-occupied">Tenant Occupied</option>
+                        <option value="rented">Tenant Occupied</option>
                     </select>
                 </div>
                 <div className="flex gap-3 pt-4">
@@ -285,3 +338,4 @@ const FlatModal: React.FC<{
         </Modal>
     );
 };
+
