@@ -221,34 +221,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializeAuth: async () => {
     console.log('authStore: Initializing auth listener and checking initial session');
 
-    try {
-      // 1. Check initial session once to avoid stuck loading if listener is slow
-      const { data: { session }, error: initialError } = await supabase.auth.getSession();
-
-      if (initialError) {
-        console.error('authStore: Initial session fetch error:', initialError.message);
-        set({ loading: false, error: initialError.message });
-      } else if (session?.user) {
-        console.log('authStore: Initial session found for UID:', session.user.id);
-        const { data: userData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('uid', session.user.id)
-          .single();
-
-        if (userData) {
-          set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
-        } else {
-          // User logged in but no profile.
-          console.log('authStore: Session found but no profile. Incomplete state.');
-          set({ loading: false, needsCompletion: true });
-        }
-      } else {
-        console.log('authStore: No initial session found');
+    // 1. Absolute safety timeout - ensures app loads even if Supabase is slow
+    const safetyTimeout = setTimeout(() => {
+      if (useAuthStore.getState().loading) {
+        console.warn('authStore: Initialization timed out, forcing loading to false');
         set({ loading: false });
       }
+    }, 5000);
 
-      // 2. Setup listener for future changes
+    try {
+      // 2. Setup listener for future changes immediately
       supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('authStore: Auth state change event:', event, session?.user?.id);
 
@@ -256,32 +238,80 @@ export const useAuthStore = create<AuthState>((set) => ({
           const currentState = useAuthStore.getState();
           // Only fetch if session is different from current user to avoid loops
           if (currentState.user?.uid !== session.user.id) {
-            const { data: userData } = await supabase
+            try {
+              const { data: userData, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('uid', session.user.id)
+                .single();
+
+              if (error) throw error;
+
+              if (userData) {
+                set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
+                clearTimeout(safetyTimeout);
+              } else {
+                set({ loading: false, needsCompletion: true });
+                clearTimeout(safetyTimeout);
+              }
+            } catch (err) {
+              console.error('authStore: Error fetching user profile on state change:', err);
+              // Don't clear safety timeout here, let it handle the fallback if needed
+              // or set loading false if we're sure it's a hard failure
+              set({ loading: false });
+            }
+          }
+        } else {
+          set({ user: null, loading: false, needsCompletion: false });
+          clearTimeout(safetyTimeout);
+        }
+      });
+
+      // 3. Check initial session asynchronously to avoid blocking
+      (async () => {
+        try {
+          const { data: { session }, error: initialError } = await supabase.auth.getSession();
+
+          if (initialError) {
+            console.error('authStore: Initial session fetch error:', initialError.message);
+            set({ loading: false, error: initialError.message });
+            clearTimeout(safetyTimeout);
+          } else if (session?.user) {
+            console.log('authStore: Initial session found for UID:', session.user.id);
+            const { data: userData, error: profileError } = await supabase
               .from('users')
               .select('*')
               .eq('uid', session.user.id)
               .single();
 
-            if (userData) {
+            if (profileError) {
+              if (profileError.code === 'PGRST116') {
+                console.log('authStore: Session found but no profile. Incomplete state.');
+                set({ loading: false, needsCompletion: true });
+              } else {
+                console.error('authStore: Profile fetch error:', profileError.message);
+                set({ loading: false });
+              }
+            } else if (userData) {
               set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
             }
+            clearTimeout(safetyTimeout);
+          } else {
+            console.log('authStore: No initial session found');
+            set({ loading: false });
+            clearTimeout(safetyTimeout);
           }
-        } else {
-          set({ user: null, loading: false, needsCompletion: false });
-        }
-      });
-
-      // 3. Absolute safety timeout
-      setTimeout(() => {
-        if (useAuthStore.getState().loading) {
-          console.warn('authStore: Initialization timed out, forcing loading to false');
+        } catch (e: any) {
+          console.error('authStore: Internal error checking session:', e);
           set({ loading: false });
+          clearTimeout(safetyTimeout);
         }
-      }, 5000);
+      })();
 
     } catch (e: any) {
-      console.error('authStore: Initialization error:', e);
+      console.error('authStore: Initialization setup error:', e);
       set({ loading: false, error: e.message });
+      clearTimeout(safetyTimeout);
     }
   },
 
