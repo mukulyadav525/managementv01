@@ -188,6 +188,18 @@ export class SocietyService extends SupabaseService {
     static async getBuildings(societyId: string) {
         return this.getDocuments(`buildings`, (q) => q.eq('society_id', societyId).order('name'));
     }
+
+    static async createBuilding(societyId: string, data: any) {
+        return this.createDocument(`buildings`, { ...data, societyId });
+    }
+
+    static async updateBuilding(buildingId: string, data: any) {
+        return this.updateDocument(`buildings`, buildingId, data);
+    }
+
+    static async deleteBuilding(buildingId: string) {
+        return this.deleteDocument(`buildings`, buildingId);
+    }
 }
 
 // Payment services

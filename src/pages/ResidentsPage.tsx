@@ -29,23 +29,43 @@ export const ResidentsPage: React.FC = () => {
         if (!user?.societyId) return;
         try {
             setLoading(true);
-            const [residentsData, flatsData, buildingsData] = await Promise.all([
-                UserService.getUsers(user.societyId),
-                supabase
+
+            // Fetch residents
+            try {
+                const residentsData = await UserService.getUsers(user.societyId);
+                setResidents(residentsData as User[]);
+            } catch (err: any) {
+                console.error('Error loading residents:', err);
+                toast.error('Failed to load residents. Check permissions.');
+            }
+
+            // Fetch flats
+            try {
+                const { data: flatsData, error: flatsError } = await supabase
                     .from('flats')
                     .select('id, flat_number, floor, building_id')
                     .eq('society_id', user.societyId)
                     .order('floor', { ascending: true })
-                    .order('flat_number', { ascending: true }),
-                SocietyService.getBuildings(user.societyId)
-            ]);
+                    .order('flat_number', { ascending: true });
+                if (flatsError) throw flatsError;
+                setFlats(flatsData || []);
+            } catch (err: any) {
+                console.error('Error loading flats:', err);
+                toast.error('Failed to load flats. Check permissions.');
+            }
 
-            setResidents(residentsData as User[]);
-            setFlats(flatsData.data || []);
-            setBuildings(buildingsData as Building[]);
+            // Fetch buildings
+            try {
+                const buildingsData = await SocietyService.getBuildings(user.societyId);
+                setBuildings(buildingsData as Building[]);
+            } catch (err: any) {
+                console.error('Error loading buildings:', err);
+                toast.error('Failed to load buildings. Check permissions.');
+            }
+
         } catch (error) {
-            console.error('Error loading residents initial data:', error);
-            toast.error('Failed to load residents data');
+            console.error('Core loading error in ResidentsPage:', error);
+            toast.error('Failed to load initial data');
         } finally {
             setLoading(false);
         }

@@ -14,7 +14,10 @@ export const FlatsPage: React.FC = () => {
     const [buildings, setBuildings] = useState<Building[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [showBuildingListModal, setShowBuildingListModal] = useState(false);
+    const [showBuildingModal, setShowBuildingModal] = useState(false);
     const [editingFlat, setEditingFlat] = useState<Flat | null>(null);
+    const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
 
     useEffect(() => {
         if (user?.societyId) {
@@ -27,19 +30,29 @@ export const FlatsPage: React.FC = () => {
         try {
             setLoading(true);
 
-            // Parallel load flats and buildings
-            const [flatsData, buildingsData] = await Promise.all([
-                user.role === 'owner'
-                    ? SocietyService.getOwnedFlats(user.uid)
-                    : SocietyService.getFlats(user.societyId),
-                SocietyService.getBuildings(user.societyId)
-            ]);
+            // Fetch flats
+            try {
+                const flatsData = user.role === 'owner'
+                    ? await SocietyService.getOwnedFlats(user.uid)
+                    : await SocietyService.getFlats(user.societyId);
+                setFlats(flatsData as Flat[]);
+            } catch (err: any) {
+                console.error('Error loading flats:', err);
+                toast.error('Failed to load flats data. Please check permissions.');
+            }
 
-            setFlats(flatsData as Flat[]);
-            setBuildings(buildingsData as Building[]);
+            // Fetch buildings
+            try {
+                const buildingsData = await SocietyService.getBuildings(user.societyId);
+                setBuildings(buildingsData as Building[]);
+            } catch (err: any) {
+                console.error('Error loading buildings:', err);
+                toast.error('Failed to load building data. Please check permissions.');
+            }
+
         } catch (error) {
-            console.error('Error loading initial data:', error);
-            toast.error('Failed to load data');
+            console.error('Core loading error:', error);
+            toast.error('Failed to load dashboard data');
         } finally {
             setLoading(false);
         }
@@ -110,30 +123,75 @@ export const FlatsPage: React.FC = () => {
         }
     };
 
+    const handleSaveBuilding = async (formData: any) => {
+        if (!user?.societyId) return;
+        try {
+            if (editingBuilding) {
+                await SocietyService.updateBuilding(editingBuilding.id, formData);
+                toast.success('Building updated');
+            } else {
+                await SocietyService.createBuilding(user.societyId, formData);
+                toast.success('Building added');
+            }
+            setShowBuildingModal(false);
+            loadInitialData();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to save building');
+        }
+    };
+
+    const handleDeleteBuilding = async (id: string) => {
+        if (!window.confirm('Are you sure? Removing a building will not delete individual flats, but will break their building reference.')) return;
+        try {
+            await SocietyService.deleteBuilding(id);
+            toast.success('Building removed');
+            loadInitialData();
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to delete building');
+        }
+    };
+
     return (
         <Layout>
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">
-                            {user?.role === 'owner' ? 'My Flats' : 'Flat Management'}
+                            {user?.role === 'owner' ? 'My Flats' : 'Property Management'}
                         </h1>
                         <p className="text-gray-600 mt-1">
-                            {user?.role === 'owner' ? 'View your allotted flats' : 'Manage all properties in the society'}
+                            {user?.role === 'owner' ? 'View your allotted flats' : 'Manage buildings and flats in the society'}
                         </p>
                     </div>
-                    {user?.role === 'admin' && (
-                        <Button onClick={() => { setEditingFlat(null); setShowModal(true); }}>
-                            <Plus size={20} className="mr-2" />
-                            Add Flat
-                        </Button>
-                    )}
+                    <div className="flex gap-2">
+                        {user?.role === 'admin' && (
+                            <>
+                                <Button variant="secondary" onClick={() => setShowBuildingListModal(true)}>
+                                    <BuildingIcon size={20} className="mr-2" />
+                                    Manage Buildings
+                                </Button>
+                                <Button onClick={() => { setEditingFlat(null); setShowModal(true); }}>
+                                    <Plus size={20} className="mr-2" />
+                                    Add Flat
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card className="p-4 flex items-center gap-4">
-                        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
+                        <div className="p-3 bg-purple-100 text-purple-600 rounded-lg">
                             <BuildingIcon size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Buildings</p>
+                            <p className="text-2xl font-bold">{buildings.length}</p>
+                        </div>
+                    </Card>
+                    <Card className="p-4 flex items-center gap-4">
+                        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
+                            <Home size={24} />
                         </div>
                         <div>
                             <p className="text-sm text-gray-500">Total Flats</p>
@@ -175,6 +233,7 @@ export const FlatsPage: React.FC = () => {
                                 <thead className="bg-gray-50 border-b">
                                     <tr>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Flat No</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Building</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Floor</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -184,31 +243,41 @@ export const FlatsPage: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {flats.map((flat) => (
-                                        <tr key={flat.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 font-medium">{flat.flatNumber}</td>
-                                            <td className="px-6 py-4">{flat.bhkType}</td>
-                                            <td className="px-6 py-4">{flat.floor}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded text-xs font-medium ${flat.occupancyStatus === 'vacant' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                                                    }`}>
-                                                    {flat.occupancyStatus === 'owner-occupied' ? 'Owner Occupied' :
-                                                        flat.occupancyStatus === 'rented' ? 'Tenant Occupied' :
-                                                            'Vacant'}
-                                                </span>
-                                            </td>
-                                            {user?.role === 'admin' && (
-                                                <td className="px-6 py-4 space-x-2">
-                                                    <button onClick={() => { setEditingFlat(flat); setShowModal(true); }} className="text-blue-600 hover:text-blue-800">
-                                                        <Edit2 size={18} />
-                                                    </button>
-                                                    <button onClick={() => handleDeleteFlat(flat.id)} className="text-red-600 hover:text-red-800">
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                    {flats.length > 0 ? flats.map((flat) => {
+                                        const building = buildings.find(b => b.id === flat.buildingId);
+                                        return (
+                                            <tr key={flat.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4 font-medium">{flat.flatNumber}</td>
+                                                <td className="px-6 py-4">{building?.name || '--'}</td>
+                                                <td className="px-6 py-4">{flat.bhkType}</td>
+                                                <td className="px-6 py-4">{flat.floor}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${flat.occupancyStatus === 'vacant' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                                                        }`}>
+                                                        {flat.occupancyStatus === 'owner-occupied' ? 'Owner Occupied' :
+                                                            flat.occupancyStatus === 'rented' ? 'Tenant Occupied' :
+                                                                'Vacant'}
+                                                    </span>
                                                 </td>
-                                            )}
+                                                {user?.role === 'admin' && (
+                                                    <td className="px-6 py-4 space-x-2">
+                                                        <button onClick={() => { setEditingFlat(flat); setShowModal(true); }} className="text-blue-600 hover:text-blue-800">
+                                                            <Edit2 size={18} />
+                                                        </button>
+                                                        <button onClick={() => handleDeleteFlat(flat.id)} className="text-red-600 hover:text-red-800">
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    }) : (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                                                No flats found. Add buildings and flats to get started.
+                                            </td>
                                         </tr>
-                                    ))}
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -224,8 +293,128 @@ export const FlatsPage: React.FC = () => {
                         buildings={buildings}
                     />
                 )}
+
+                {showBuildingListModal && (
+                    <BuildingListModal
+                        isOpen={showBuildingListModal}
+                        onClose={() => setShowBuildingListModal(false)}
+                        buildings={buildings}
+                        onAdd={() => { setEditingBuilding(null); setShowBuildingModal(true); }}
+                        onEdit={(b) => { setEditingBuilding(b); setShowBuildingModal(true); }}
+                        onDelete={handleDeleteBuilding}
+                    />
+                )}
+
+                {showBuildingModal && (
+                    <BuildingModal
+                        isOpen={showBuildingModal}
+                        onClose={() => setShowBuildingModal(false)}
+                        onSubmit={handleSaveBuilding}
+                        initialData={editingBuilding}
+                    />
+                )}
             </div>
         </Layout>
+    );
+};
+
+const BuildingListModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    buildings: Building[];
+    onAdd: () => void;
+    onEdit: (b: Building) => void;
+    onDelete: (id: string) => void;
+}> = ({ isOpen, onClose, buildings, onAdd, onEdit, onDelete }) => (
+    <Modal isOpen={isOpen} onClose={onClose} title="Society Buildings">
+        <div className="space-y-4">
+            <div className="flex justify-end">
+                <Button size="sm" onClick={onAdd}>
+                    <Plus size={16} className="mr-1" /> Add Building
+                </Button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto">
+                {buildings.length === 0 ? (
+                    <p className="text-center py-8 text-gray-500">No buildings added yet.</p>
+                ) : (
+                    <div className="divide-y">
+                        {buildings.map(b => (
+                            <div key={b.id} className="py-3 flex justify-between items-center group">
+                                <div>
+                                    <h4 className="font-medium text-gray-900">{b.name}</h4>
+                                    <p className="text-xs text-gray-500">{b.totalFloors} Floors • {b.totalFlats || 0} Flats</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => onEdit(b)} className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
+                                        <Edit2 size={16} />
+                                    </button>
+                                    <button onClick={() => onDelete(b.id)} className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            <div className="pt-4">
+                <Button variant="secondary" onClick={onClose} className="w-full">Close</Button>
+            </div>
+        </div>
+    </Modal>
+);
+
+const BuildingModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: (data: any) => void;
+    initialData?: Building | null;
+}> = ({ isOpen, onClose, onSubmit, initialData }) => {
+    const [formData, setFormData] = useState({
+        name: initialData?.name || '',
+        totalFloors: initialData?.totalFloors || 1,
+        totalFlats: initialData?.totalFlats || 0
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit(formData);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={initialData ? 'Edit Building' : 'Add New Building'}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <Input
+                    label="Building Name"
+                    placeholder="e.g. Building A, Wing B"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                />
+                <div className="grid grid-cols-2 gap-4">
+                    <Input
+                        label="Total Floors"
+                        type="number"
+                        min={1}
+                        value={formData.totalFloors}
+                        onChange={(e) => setFormData({ ...formData, totalFloors: parseInt(e.target.value) || 1 })}
+                        required
+                    />
+                    <Input
+                        label="Capacity (Flats)"
+                        type="number"
+                        min={0}
+                        value={formData.totalFlats}
+                        onChange={(e) => setFormData({ ...formData, totalFlats: parseInt(e.target.value) || 0 })}
+                        required
+                    />
+                </div>
+                <div className="flex gap-3 pt-4">
+                    <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+                    <Button type="submit" className="flex-1">Save Building</Button>
+                </div>
+            </form>
+        </Modal>
     );
 };
 
@@ -338,4 +527,5 @@ const FlatModal: React.FC<{
         </Modal>
     );
 };
+
 
