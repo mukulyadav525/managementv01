@@ -22,6 +22,9 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(false);
     const [flats, setFlats] = useState<Flat[]>([]);
+    const [buildings, setBuildings] = useState<any[]>([]);
+    const [selectedBuilding, setSelectedBuilding] = useState<string>('');
+    const [selectedFloor, setSelectedFloor] = useState<string>('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -34,7 +37,31 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
     useEffect(() => {
         if (isOpen) {
-            loadFlats();
+            loadData();
+        }
+    }, [isOpen, request, user]);
+
+    useEffect(() => {
+        if (request && flats.length > 0) {
+            const currentFlat = flats.find(f => f.id === request.flatId);
+            if (currentFlat) {
+                setSelectedBuilding(currentFlat.buildingId || '');
+                setSelectedFloor(currentFlat.floor?.toString() || '');
+                setFormData(prev => ({ ...prev, flatId: request.flatId }));
+            }
+        }
+    }, [request, flats]);
+
+    const loadData = async () => {
+        if (!user?.societyId) return;
+        try {
+            const [flatsData, buildingsData] = await Promise.all([
+                SocietyService.getFlats(user.societyId),
+                SocietyService.getBuildings(user.societyId)
+            ]);
+            setFlats(flatsData as Flat[]);
+            setBuildings(buildingsData);
+
             if (request) {
                 setFormData({
                     title: request.title,
@@ -49,23 +76,23 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                     title: '',
                     category: 'plumbing',
                     description: '',
-                    flatId: user?.flatIds?.[0] || '',
+                    flatId: '',
                     preferredTime: '',
                     requesterId: user?.uid || ''
                 });
             }
-        }
-    }, [isOpen, request, user]);
-
-    const loadFlats = async () => {
-        if (!user?.societyId) return;
-        try {
-            const data = await SocietyService.getFlats(user.societyId);
-            setFlats(data as Flat[]);
         } catch (error) {
-            console.error('Error loading flats:', error);
+            console.error('Error loading data:', error);
         }
     };
+
+    const floors = selectedBuilding
+        ? Array.from(new Set(flats.filter(f => f.buildingId === selectedBuilding).map(f => f.floor))).sort((a, b) => a - b)
+        : [];
+
+    const filteredFlats = selectedBuilding && selectedFloor
+        ? flats.filter(f => f.buildingId === selectedBuilding && f.floor?.toString() === selectedFloor)
+        : [];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -128,16 +155,56 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                         </select>
                     </div>
                     <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700">Building *</label>
+                        <select
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                            value={selectedBuilding}
+                            onChange={(e) => {
+                                setSelectedBuilding(e.target.value);
+                                setSelectedFloor('');
+                                setFormData({ ...formData, flatId: '' });
+                            }}
+                            required
+                        >
+                            <option value="">Select Building...</option>
+                            {buildings.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700">Floor *</label>
+                        <select
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                            value={selectedFloor}
+                            onChange={(e) => {
+                                setSelectedFloor(e.target.value);
+                                setFormData({ ...formData, flatId: '' });
+                            }}
+                            disabled={!selectedBuilding}
+                            required
+                        >
+                            <option value="">Select Floor...</option>
+                            {floors.map(f => (
+                                <option key={f} value={f?.toString()}>{f === 0 ? 'Ground' : `Floor ${f}`}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="space-y-1">
                         <label className="block text-sm font-medium text-gray-700">Flat *</label>
                         <select
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                             value={formData.flatId}
                             onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
+                            disabled={!selectedFloor}
                             required
                         >
                             <option value="">Select Flat...</option>
-                            {flats.map((f) => (
-                                <option key={f.id} value={f.id}>Flat {f.flatNumber} (Floor {f.floor})</option>
+                            {filteredFlats.map((f) => (
+                                <option key={f.id} value={f.id}>Flat {f.flatNumber}</option>
                             ))}
                         </select>
                     </div>
