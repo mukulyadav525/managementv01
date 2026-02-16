@@ -12,6 +12,8 @@ export type ComplaintPriority = 'low' | 'medium' | 'high';
 
 export type VisitorStatus = 'pending' | 'approved' | 'rejected' | 'exited';
 
+export type VaccinationStatus = 'pending' | 'vaccinated';
+
 export interface User {
   uid: string;
   name: string;
@@ -281,6 +283,21 @@ export interface CCTVCamera {
   streamUrl?: string;
   recordingUrl?: string;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Pet {
+  id: string;
+  societyId: string;
+  flatId: string;
+  ownerId: string;
+  name: string;
+  type: string;
+  breed?: string;
+  vaccinationStatus: VaccinationStatus;
+  vaccinationDate?: string;
+  photoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

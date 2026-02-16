@@ -12,6 +12,7 @@ import {
   LogOut,
   UserCircle,
   Camera,
+  PawPrint,
   Wallet
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
@@ -45,6 +46,7 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'Complaints', path: '/complaints', icon: ClipboardList, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
     { name: 'Announcements', path: '/announcements', icon: Bell, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
     { name: 'Vehicles', path: '/vehicles', icon: Car, roles: ['admin', 'owner', 'tenant', 'staff'] },
+    { name: 'Pets', path: '/pets', icon: PawPrint, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
   ];
 };

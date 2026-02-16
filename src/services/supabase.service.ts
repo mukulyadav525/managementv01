@@ -407,3 +407,26 @@ export class CCTVService extends SupabaseService {
         return this.deleteDocument(`cctv_cameras`, cameraId);
     }
 }
+
+// Pet services
+export class PetService extends SupabaseService {
+    static async getPets(societyId: string, flatId?: string) {
+        return this.getDocuments(`pets`, (q) => {
+            let res = q.eq('society_id', societyId).order('created_at', { ascending: false });
+            if (flatId) res = res.eq('flat_id', flatId);
+            return res;
+        });
+    }
+
+    static async createPet(societyId: string, data: any) {
+        return this.createDocument(`pets`, { ...data, societyId });
+    }
+
+    static async updatePet(petId: string, data: any) {
+        return this.updateDocument(`pets`, petId, data);
+    }
+
+    static async deletePet(petId: string) {
+        return this.deleteDocument(`pets`, petId);
+    }
+}

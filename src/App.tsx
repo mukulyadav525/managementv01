@@ -24,6 +24,7 @@ import { ResidentsPage } from './pages/ResidentsPage';
 import { ResidentsListPage } from './pages/ResidentsListPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { VehiclesPage } from './pages/VehiclesPage';
+import { PetsPage } from './pages/PetsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SalaryPaymentsPage } from './pages/SalaryPaymentsPage';
@@ -226,6 +227,14 @@ function App() {
           element={
             <ProtectedRoute>
               <VehiclesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pets"
+          element={
+            <ProtectedRoute>
+              <PetsPage />
             </ProtectedRoute>
           }
         />
