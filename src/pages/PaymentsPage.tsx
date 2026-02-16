@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Download, CreditCard, Plus, Trash2 } from 'lucide-react';
+import { Download, CreditCard, Plus, Trash2, Bell } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
-import { PaymentService } from '@/services/supabase.service';
-import { Payment } from '@/types';
+import { PaymentService, NotificationService } from '@/services/supabase.service';
+import { Payment, Flat, Building } from '@/types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { supabase } from '@/config/supabase';
@@ -15,30 +15,72 @@ import { Input } from '@/components/common';
 export const PaymentsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [flats, setFlats] = useState<Flat[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showBillModal, setShowBillModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'overdue'>('all');
 
   useEffect(() => {
     if (user?.societyId) {
-      loadPayments();
+      loadData();
     }
   }, [user]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        loadPayments(),
+        loadFlats(),
+        loadBuildings()
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadBuildings = async () => {
+    if (!user?.societyId) return;
+    try {
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('society_id', user.societyId);
+      if (error) throw error;
+      setBuildings(data as Building[]);
+    } catch (error) {
+      console.error('Error loading buildings:', error);
+    }
+  };
+
+  const loadFlats = async () => {
+    if (!user?.societyId) return;
+    try {
+      const { data, error } = await supabase
+        .from('flats')
+        .select('*')
+        .eq('society_id', user.societyId);
+      if (error) throw error;
+      setFlats(data as Flat[]);
+    } catch (error) {
+      console.error('Error loading flats:', error);
+    }
+  };
 
   const loadPayments = async () => {
     if (!user?.societyId) return;
 
     try {
-      setLoading(true);
       const flatId = user.role === 'admin' ? undefined : user.flatIds?.[0];
       const data = await PaymentService.getPayments(user.societyId, flatId);
       setPayments(data as Payment[]);
     } catch (error) {
       toast.error('Failed to load payments');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -58,14 +100,14 @@ export const PaymentsPage: React.FC = () => {
   const handleGenerateBills = async (formData: any) => {
     if (!user?.societyId) return;
     try {
-      const { data: flats, error: flatsError } = await supabase
+      const { data: flatsData, error: flatsError } = await supabase
         .from('flats')
         .select('id, owner_id, occupancy_status')
         .eq('society_id', user.societyId);
 
       if (flatsError) throw flatsError;
 
-      const bills = flats.map(flat => ({
+      const bills = flatsData.map(flat => ({
         societyId: user.societyId,
         flatId: flat.id,
         userId: flat.owner_id, // Default to owner
@@ -82,7 +124,7 @@ export const PaymentsPage: React.FC = () => {
       const { error } = await supabase.from('payments').insert(toSnake(bills));
       if (error) throw error;
 
-      toast.success(`Bills generated for ${flats.length} flats`);
+      toast.success(`Bills generated for ${flatsData.length} flats`);
       setShowBillModal(false);
       loadPayments();
     } catch (error) {
@@ -151,33 +193,33 @@ export const PaymentsPage: React.FC = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          <Card className="p-6">
             <p className="text-sm text-gray-600">Total Collected</p>
             <p className="text-2xl font-bold text-green-600 mt-2">
               ₹{getTotalAmount('paid').toLocaleString()}
             </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          </Card>
+          <Card className="p-6">
             <p className="text-sm text-gray-600">Pending</p>
             <p className="text-2xl font-bold text-yellow-600 mt-2">
               ₹{getTotalAmount('pending').toLocaleString()}
             </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          </Card>
+          <Card className="p-6">
             <p className="text-sm text-gray-600">Overdue</p>
             <p className="text-2xl font-bold text-red-600 mt-2">
               ₹{payments.filter(p => p.status === 'pending' && new Date(p.dueDate) < new Date())
                 .reduce((sum, p) => sum + p.amount + (p.fineAmount || 0), 0).toLocaleString()}
             </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+          </Card>
+          <Card className="p-6">
             <p className="text-sm text-gray-600">This Month</p>
             <p className="text-2xl font-bold text-primary-600 mt-2">
               ₹{payments.filter(p =>
                 format(new Date(p.createdAt), 'MM-yyyy') === format(new Date(), 'MM-yyyy')
               ).reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
             </p>
-          </div>
+          </Card>
         </div>
 
         {/* Filters */}
@@ -224,7 +266,13 @@ export const PaymentsPage: React.FC = () => {
                   {filteredPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{payment.flatId}</div>
+                        <div className="font-medium text-gray-900">
+                          {(() => {
+                            const flat = flats.find(f => f.id === payment.flatId);
+                            const building = buildings.find(b => b.id === flat?.buildingId);
+                            return flat ? `${building ? building.name + ' - ' : ''}${flat.flatNumber}` : payment.flatId;
+                          })()}
+                        </div>
                         <div className="text-sm text-gray-500">{payment.month}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -261,17 +309,46 @@ export const PaymentsPage: React.FC = () => {
                               Pay Now
                             </Button>
                           ) : (
-                            <button className="text-primary-600 hover:text-primary-700">
-                              View Receipt
-                            </button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                if (payment.receiptUrl) window.open(payment.receiptUrl, '_blank');
+                              }}
+                            >
+                              Receipt
+                            </Button>
                           )}
                           {user?.role === 'admin' && (
-                            <button
-                              onClick={() => handleDelete(payment.id)}
-                              className="text-red-400 hover:text-red-600"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const { data: userData, error } = await supabase
+                                      .from('users')
+                                      .select('*')
+                                      .eq('uid', payment.userId)
+                                      .single();
+                                    if (error) throw error;
+                                    setSelectedUser(userData);
+                                    setShowNotificationModal(true);
+                                  } catch (error) {
+                                    toast.error('Failed to load resident info');
+                                  }
+                                }}
+                                className="text-amber-600 hover:text-amber-800"
+                                title="Notify Resident"
+                              >
+                                <Bell size={20} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(payment.id)}
+                                className="text-red-600 hover:text-red-800"
+                                title="Delete"
+                              >
+                                <Trash2 size={20} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -293,14 +370,27 @@ export const PaymentsPage: React.FC = () => {
               setSelectedPayment(null);
             }}
             onPay={() => handlePayment(selectedPayment.id)}
+            flats={flats}
+            buildings={buildings}
           />
         )}
+
         {/* Bill Generation Modal */}
         {showBillModal && (
           <GenerateBillModal
             isOpen={showBillModal}
             onClose={() => setShowBillModal(false)}
             onSubmit={handleGenerateBills}
+            flats={flats}
+            buildings={buildings}
+          />
+        )}
+
+        {showNotificationModal && selectedUser && (
+          <SendNotificationModal
+            isOpen={showNotificationModal}
+            resident={selectedUser}
+            onClose={() => setShowNotificationModal(false)}
           />
         )}
       </div>
@@ -314,7 +404,9 @@ const PaymentModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onPay: () => void;
-}> = ({ payment, isOpen, onClose, onPay }) => {
+  flats: Flat[];
+  buildings: Building[];
+}> = ({ payment, isOpen, onClose, onPay, flats, buildings }) => {
   const [paymentMethod, setPaymentMethod] = useState('upi');
 
   return (
@@ -324,7 +416,13 @@ const PaymentModal: React.FC<{
         <div className="bg-gray-50 p-4 rounded-lg space-y-2">
           <div className="flex justify-between">
             <span className="text-gray-600">Flat:</span>
-            <span className="font-medium">{payment.flatId}</span>
+            <span className="font-medium">
+              {(() => {
+                const flat = flats.find(f => f.id === payment.flatId);
+                const building = buildings.find(b => b.id === flat?.buildingId);
+                return flat ? `${building ? building.name + ' - ' : ''}${flat.flatNumber}` : payment.flatId;
+              })()}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Type:</span>
@@ -389,6 +487,8 @@ const GenerateBillModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  flats: Flat[];
+  buildings: Building[];
 }> = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     type: 'maintenance',
@@ -456,6 +556,86 @@ const GenerateBillModal: React.FC<{
         <div className="flex gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
           <Button type="submit" className="flex-1">Generate for All</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+const SendNotificationModal: React.FC<{
+  isOpen: boolean;
+  resident: any;
+  onClose: () => void;
+}> = ({ isOpen, resident, onClose }) => {
+  const { user } = useAuthStore();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: 'Payment Reminder',
+    message: `Hello ${resident.name}, this is a reminder regarding your pending payment.`,
+    type: 'info'
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.societyId) return;
+
+    try {
+      setLoading(true);
+      await NotificationService.createNotification({
+        userId: resident.uid,
+        societyId: user.societyId,
+        title: formData.title,
+        message: formData.message,
+        type: formData.type as any
+      });
+      toast.success('Notification sent!');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to send notification');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Send Notification to ${resident.name}`}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Message</label>
+          <textarea
+            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+            rows={4}
+            value={formData.message}
+            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Priority</label>
+          <select
+            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+            value={formData.type}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+          >
+            <option value="info">Information</option>
+            <option value="warning">Warning</option>
+            <option value="success">Success</option>
+            <option value="error">Critical</option>
+          </select>
+        </div>
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button type="submit" loading={loading} className="flex-1">Send Notification</Button>
         </div>
       </form>
     </Modal>
