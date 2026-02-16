@@ -3,8 +3,8 @@ import { Users, Shield, UserX, UserCheck, Phone, Mail, Edit2, Trash2, UserMinus 
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
-import { UserService, toSnake } from '@/services/supabase.service';
-import { User } from '@/types';
+import { UserService, SocietyService, toSnake } from '@/services/supabase.service';
+import { User, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 
@@ -12,6 +12,7 @@ export const ResidentsPage: React.FC = () => {
     const { user } = useAuthStore();
     const [residents, setResidents] = useState<User[]>([]);
     const [flats, setFlats] = useState<any[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showModal, setShowModal] = useState(false);
@@ -20,17 +21,42 @@ export const ResidentsPage: React.FC = () => {
 
     useEffect(() => {
         if (user?.societyId) {
-            loadResidents();
-            loadFlats();
+            loadInitialData();
         }
     }, [user]);
+
+    const loadInitialData = async () => {
+        if (!user?.societyId) return;
+        try {
+            setLoading(true);
+            const [residentsData, flatsData, buildingsData] = await Promise.all([
+                UserService.getUsers(user.societyId),
+                supabase
+                    .from('flats')
+                    .select('id, flat_number, floor, building_id')
+                    .eq('society_id', user.societyId)
+                    .order('floor', { ascending: true })
+                    .order('flat_number', { ascending: true }),
+                SocietyService.getBuildings(user.societyId)
+            ]);
+
+            setResidents(residentsData as User[]);
+            setFlats(flatsData.data || []);
+            setBuildings(buildingsData as Building[]);
+        } catch (error) {
+            console.error('Error loading residents initial data:', error);
+            toast.error('Failed to load residents data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const loadFlats = async () => {
         if (!user?.societyId) return;
         try {
             const { data, error } = await supabase
                 .from('flats')
-                .select('id, flat_number, floor')
+                .select('id, flat_number, floor, building_id')
                 .eq('society_id', user.societyId)
                 .order('floor', { ascending: true })
                 .order('flat_number', { ascending: true });
@@ -45,13 +71,10 @@ export const ResidentsPage: React.FC = () => {
     const loadResidents = async () => {
         if (!user?.societyId) return;
         try {
-            setLoading(true);
             const data = await UserService.getUsers(user.societyId);
             setResidents(data as User[]);
         } catch (error) {
             toast.error('Failed to load residents');
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -127,12 +150,21 @@ export const ResidentsPage: React.FC = () => {
             let flatId = '';
             const { data: existingFlats } = await supabase
                 .from('flats')
-                .select('id, flat_number, floor')
+                .select('id, flat_number, floor, building_id')
                 .eq('society_id', user.societyId)
                 .eq('flat_number', formData.flatNumber);
 
             if (existingFlats && existingFlats.length > 0) {
                 flatId = existingFlats[0].id;
+                // Update flat building and floor if they changed/set in modal
+                if (['owner', 'tenant'].includes(formData.role)) {
+                    await supabase.from('flats')
+                        .update({
+                            building_id: formData.buildingId,
+                            floor: parseInt(formData.floor)
+                        })
+                        .eq('id', flatId);
+                }
             } else {
                 const newFlatId = crypto.randomUUID();
                 const { error: createFlatError } = await supabase
@@ -141,7 +173,8 @@ export const ResidentsPage: React.FC = () => {
                         id: newFlatId,
                         societyId: user.societyId,
                         flatNumber: formData.flatNumber,
-                        floor: formData.role === 'tenant' ? parseInt(formData.floor) : 1,
+                        buildingId: formData.buildingId,
+                        floor: ['owner', 'tenant'].includes(formData.role) ? parseInt(formData.floor) : 1,
                         occupancyStatus: 'vacant',
                         bhkType: '2BHK',
                         area: 1200
@@ -200,6 +233,7 @@ export const ResidentsPage: React.FC = () => {
                     .update({
                         [updateField]: residentUid,
                         occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied',
+                        building_id: formData.buildingId,
                         floor: parseInt(formData.floor)
                     })
                     .eq('id', flatId);
@@ -210,8 +244,7 @@ export const ResidentsPage: React.FC = () => {
             toast.success(editingResident ? 'Resident updated' : 'Resident added');
             setShowModal(false);
             setEditingResident(null);
-            loadResidents();
-            loadFlats();
+            loadInitialData(); // Reload all to stay in sync
         } catch (error: any) {
             toast.error(error.message || 'Failed to save resident');
         } finally {
@@ -297,9 +330,10 @@ export const ResidentsPage: React.FC = () => {
                                                     {resident.flatIds && resident.flatIds.length > 0 ? (
                                                         resident.flatIds.map(fId => {
                                                             const flat = flats.find(f => f.id === fId);
+                                                            const building = buildings.find(b => b.id === flat?.building_id);
                                                             return (
                                                                 <span key={fId} className="px-2 py-0.5 bg-primary-50 text-primary-700 rounded text-xs font-medium">
-                                                                    {flat ? `Flat ${flat.flatNumber || flat.flat_number} (Floor ${flat.floor})` : fId}
+                                                                    {flat ? `Flat ${flat.flat_number || flat.flatNumber} (${building ? building.name : 'No Building'}, Floor ${flat.floor})` : fId}
                                                                 </span>
                                                             );
                                                         })
@@ -343,7 +377,8 @@ export const ResidentsPage: React.FC = () => {
                                                             ...resident,
                                                             // Inject flat details for modal pre-fill
                                                             flatNumber: flat?.flat_number || '',
-                                                            floor: flat?.floor?.toString() || '1'
+                                                            floor: flat?.floor?.toString() || '1',
+                                                            buildingId: flat?.building_id || ''
                                                         } as any);
                                                         setShowModal(true);
                                                     }}
@@ -396,6 +431,7 @@ export const ResidentsPage: React.FC = () => {
                         onClose={() => setShowModal(false)}
                         onSubmit={handleSaveResident}
                         flats={flats}
+                        buildings={buildings}
                         initialData={editingResident}
                     />
                 )}
@@ -449,19 +485,39 @@ const ResidentModal: React.FC<{
     onClose: () => void;
     onSubmit: (data: any) => void;
     flats: any[];
-    initialData?: (User & { flatNumber?: string; floor?: string }) | null;
-}> = ({ isOpen, onClose, onSubmit, flats, initialData }) => {
+    buildings: Building[];
+    initialData?: (User & { flatNumber?: string; floor?: string; buildingId?: string }) | null;
+}> = ({ isOpen, onClose, onSubmit, flats, buildings, initialData }) => {
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
         email: initialData?.email || '',
         phone: initialData?.phone || '',
         role: initialData?.role || 'tenant',
+        buildingId: initialData?.buildingId || '',
         flatNumber: initialData?.flatNumber || '',
         floor: initialData?.floor || '1'
     });
 
+    const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (['owner', 'tenant'].includes(formData.role)) {
+            if (!formData.buildingId) {
+                return toast.error('Please select a building');
+            }
+            if (selectedBuilding) {
+                const floorNum = parseInt(formData.floor);
+                if (floorNum < 1) {
+                    return toast.error('Floor number must be at least 1');
+                }
+                if (floorNum > selectedBuilding.totalFloors) {
+                    return toast.error(`Invalid floor. Building ${selectedBuilding.name} only has ${selectedBuilding.totalFloors} floors.`);
+                }
+            }
+        }
+
         onSubmit(formData);
     };
 
@@ -522,6 +578,23 @@ const ResidentModal: React.FC<{
                     </div>
                 </div>
 
+                {['owner', 'tenant'].includes(formData.role) && (
+                    <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700">Building <span className="text-red-500">*</span></label>
+                        <select
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                            value={formData.buildingId}
+                            onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
+                            required
+                        >
+                            <option value="">Select Building</option>
+                            {buildings.map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {['owner', 'tenant'].includes(formData.role) && (
                         <div className="space-y-1">
@@ -538,6 +611,7 @@ const ResidentModal: React.FC<{
                                     setFormData({
                                         ...formData,
                                         flatNumber: val,
+                                        buildingId: existing ? existing.building_id || formData.buildingId : formData.buildingId,
                                         floor: existing ? (existing.floor || existing.floor_number)?.toString() : formData.floor
                                     });
                                 }}
@@ -561,6 +635,9 @@ const ResidentModal: React.FC<{
                                 onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                                 required
                             />
+                            {selectedBuilding && (
+                                <p className="text-xs text-gray-500">Max floors: {selectedBuilding.totalFloors}</p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -575,3 +652,4 @@ const ResidentModal: React.FC<{
         </Modal>
     );
 };
+
