@@ -232,7 +232,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     try {
       // 2. Setup listener as the primary state driver
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      supabase.auth.onAuthStateChange(async (event, session) => {
         console.log(`authStore: [Auth Event] ${event}`, session?.user?.id);
 
         if (session?.user) {
