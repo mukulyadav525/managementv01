@@ -128,6 +128,7 @@ export const PaymentsPage: React.FC = () => {
       setShowBillModal(false);
       loadPayments();
     } catch (error) {
+      console.error('Error generating bills:', error);
       toast.error('Failed to generate bills');
     }
   };
