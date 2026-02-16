@@ -51,33 +51,6 @@ export const ResidentsPage: React.FC = () => {
         }
     };
 
-    const loadFlats = async () => {
-        if (!user?.societyId) return;
-        try {
-            const { data, error } = await supabase
-                .from('flats')
-                .select('id, flat_number, floor, building_id')
-                .eq('society_id', user.societyId)
-                .order('floor', { ascending: true })
-                .order('flat_number', { ascending: true });
-
-            if (error) throw error;
-            setFlats(data || []);
-        } catch (error: any) {
-            console.error('Error loading flats:', error.message);
-        }
-    };
-
-    const loadResidents = async () => {
-        if (!user?.societyId) return;
-        try {
-            const data = await UserService.getUsers(user.societyId);
-            setResidents(data as User[]);
-        } catch (error) {
-            toast.error('Failed to load residents');
-        }
-    };
-
     const handleUpdateStatus = async (uid: string, status: string) => {
         try {
             const { error } = await supabase
@@ -86,7 +59,7 @@ export const ResidentsPage: React.FC = () => {
                 .eq('uid', uid);
             if (error) throw error;
             toast.success(`User status updated to ${status}`);
-            loadResidents();
+            loadInitialData();
         } catch (error) {
             toast.error('Failed to update status');
         }
@@ -100,7 +73,7 @@ export const ResidentsPage: React.FC = () => {
                 .eq('uid', uid);
             if (error) throw error;
             toast.success(`User role updated to ${role}`);
-            loadResidents();
+            loadInitialData();
         } catch (error) {
             toast.error('Failed to update role');
         }
@@ -133,7 +106,7 @@ export const ResidentsPage: React.FC = () => {
             if (deleteError) throw deleteError;
 
             toast.success('Resident deleted successfully');
-            loadResidents();
+            loadInitialData();
         } catch (error: any) {
             toast.error(error.message || 'Failed to delete resident');
         } finally {
