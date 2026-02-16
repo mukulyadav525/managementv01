@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Car, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { Button, Card, Modal, Input } from '@/components/common';
+import { Button, Card, Modal, Input, ResidenceSelector } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { toSnake } from '@/services/supabase.service';
 import { supabase } from '@/config/supabase';
@@ -357,30 +357,22 @@ const VehicleModal: React.FC<{
                         required
                     />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Flat</label>
-                        <select
-                            value={formData.flatId}
-                            onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-100 disabled:text-gray-500"
-                            required
-                            disabled={flats.length === 1}
-                        >
-                            <option value="">Select Flat</option>
-                            {flats.map(f => (
-                                <option key={f.id} value={f.id}>
-                                    {f.flat_number} {f.floor !== undefined && f.floor !== null ? `(Floor ${f.floor})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+
+                {/* Unified Residence Selection */}
+                <ResidenceSelector
+                    initialFlatId={formData.flatId}
+                    onSelect={(flatId) => setFormData({ ...formData, flatId })}
+                    restrictedToUserFlats={userRole !== 'admin' && userRole !== 'staff'}
+                    showResidentInfo={userRole === 'admin' || userRole === 'staff'}
+                />
+
+                <div className="grid grid-cols-1 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Select Resident</label>
                         <select
                             value={formData.userId}
                             onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-100 disabled:text-gray-500"
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
                             required
                             disabled={residents.length === 1}
                         >

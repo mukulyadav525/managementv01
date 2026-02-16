@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Plus, UserCheck, CheckCircle, Camera, Trash2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { Button, Card, Modal, Input } from '@/components/common';
+import { Button, Card, Modal, Input, ResidenceSelector } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { VisitorService, StorageService, toSnake } from '@/services/supabase.service';
 import { Visitor } from '@/types';
@@ -41,6 +41,7 @@ export const VisitorsPage: React.FC = () => {
       console.error('Error loading flats:', error.message);
     }
   };
+
 
   const loadVisitors = async () => {
     if (!user?.societyId) return;
@@ -375,7 +376,6 @@ export const VisitorsPage: React.FC = () => {
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddVisitor}
-          flats={flats}
         />
 
         {/* Visitor Pass Modal */}
@@ -398,12 +398,12 @@ const AddVisitorModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
-  flats: any[];
-}> = ({ isOpen, onClose, onSubmit, flats }) => {
+}> = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     flatNumber: '',
+    flatId: '',
     purpose: '',
     vehicleNumber: '',
     vType: 'guest',
@@ -413,29 +413,8 @@ const AddVisitorModal: React.FC<{
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { user } = useAuthStore();
-
-  // Prepare allowed flats based on role
-  const allowedFlats = React.useMemo(() => {
-    if (!user || user.role === 'admin' || user.role === 'staff' || user.role === 'security' || !flats) return flats;
-
-    // For Owners/Tenants, allow only assigned flats
-    return flats.filter(f =>
-      f.owner_id === user.uid ||
-      f.tenant_id === user.uid ||
-      (user.flatIds && user.flatIds.includes(f.id))
-    );
-  }, [flats, user]);
-
   const isRestricted = user?.role !== 'admin' && user?.role !== 'staff' && user?.role !== 'security';
 
-  const handleFlatChange = (val: string) => {
-    const existing = flats.find(f => f.flat_number === val);
-    setFormData({
-      ...formData,
-      flatNumber: val,
-      floor: existing ? (existing.floor || existing.floor_number)?.toString() : formData.floor
-    });
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -444,6 +423,7 @@ const AddVisitorModal: React.FC<{
       name: '',
       phone: '',
       flatNumber: '',
+      flatId: '',
       purpose: '',
       vehicleNumber: '',
       vType: 'guest',
@@ -468,50 +448,17 @@ const AddVisitorModal: React.FC<{
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           required
         />
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Flat Number</label>
-            {isRestricted ? (
-              <select
-                className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 bg-white"
-                value={formData.flatNumber}
-                onChange={(e) => handleFlatChange(e.target.value)}
-                required
-              >
-                <option value="">Select Flat</option>
-                {allowedFlats.map(f => (
-                  <option key={f.id} value={f.flat_number}>
-                    {f.flat_number} {f.floor ? `(Floor ${f.floor})` : ''}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  list="visitor-flat-suggestions"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
-                  placeholder="e.g. 101, A-502"
-                  value={formData.flatNumber}
-                  onChange={(e) => handleFlatChange(e.target.value)}
-                  required
-                />
-                <datalist id="visitor-flat-suggestions">
-                  {flats.map(f => (
-                    <option key={f.id} value={f.flat_number}>Floor {f.floor}</option>
-                  ))}
-                </datalist>
-              </>
-            )}
-          </div>
-          <Input
-            label="Floor Number (Optional)"
-            type="number"
-            value={formData.floor}
-            onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-            disabled={isRestricted} // Auto-filled for restricted users
-          />
-        </div>
+        <ResidenceSelector
+          initialFlatId={formData.flatId}
+          onSelect={(flatId, flat) => setFormData({
+            ...formData,
+            flatId,
+            flatNumber: flat?.flatNumber || '',
+            floor: flat?.floor?.toString() || ''
+          })}
+          restrictedToUserFlats={isRestricted}
+          showResidentInfo={!isRestricted}
+        />
 
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">Visitor Type</label>

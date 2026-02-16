@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, AlertCircle, Trash2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { Button, Card, Modal, Input } from '@/components/common';
+import { Button, Card, Modal, Input, ResidenceSelector } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { ComplaintService, StorageService } from '@/services/supabase.service';
 import { Complaint } from '@/types';
@@ -12,6 +12,7 @@ import { supabase } from '@/config/supabase';
 export const ComplaintsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [flats, setFlats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'open' | 'in-progress' | 'resolved'>('all');
@@ -19,8 +20,24 @@ export const ComplaintsPage: React.FC = () => {
   useEffect(() => {
     if (user?.societyId) {
       loadComplaints();
+      loadFlats();
     }
   }, [user]);
+
+  const loadFlats = async () => {
+    if (!user?.societyId) return;
+    try {
+      const { data, error } = await supabase
+        .from('flats')
+        .select('id, flat_number')
+        .eq('society_id', user.societyId);
+
+      if (error) throw error;
+      setFlats(data || []);
+    } catch (error: any) {
+      console.error('Error loading flats:', error.message);
+    }
+  };
 
   const loadComplaints = async () => {
     if (!user?.societyId) return;
@@ -225,7 +242,7 @@ export const ComplaintsPage: React.FC = () => {
                     </div>
                     <div className="text-right text-sm text-gray-500">
                       <div className="flex items-center gap-2 justify-end">
-                        <p>Flat {complaint.flatId}</p>
+                        <p>Flat {flats.find(f => f.id === complaint.flatId)?.flat_number || complaint.flatId}</p>
                         {user?.role === 'admin' && (
                           <button
                             onClick={() => handleDelete(complaint.id)}
@@ -325,23 +342,7 @@ const AddComplaintModal: React.FC<{
     images: [] as File[],
     flatId: ''
   });
-  const [flats, setFlats] = useState<any[]>([]);
   const { user } = useAuthStore();
-
-  useEffect(() => {
-    const loadFlats = async () => {
-      if (!user?.societyId) return;
-      const { data } = await supabase
-        .from('flats')
-        .select('id, flat_number')
-        .eq('society_id', user.societyId);
-      setFlats(data || []);
-    };
-    if (['admin', 'staff', 'security'].includes(user?.role || '')) {
-      loadFlats();
-    }
-  }, [user]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -371,21 +372,12 @@ const AddComplaintModal: React.FC<{
           required
         />
 
-        {['admin', 'staff', 'security'].includes(user?.role || '') && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Flat (Optional)</label>
-            <select
-              value={formData.flatId}
-              onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="">Select Flat</option>
-              {flats.map(f => (
-                <option key={f.id} value={f.id}>{f.flat_number}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        <ResidenceSelector
+          initialFlatId={formData.flatId}
+          onSelect={(flatId) => setFormData({ ...formData, flatId })}
+          restrictedToUserFlats={user?.role !== 'admin' && user?.role !== 'staff'}
+          showResidentInfo={user?.role === 'admin' || user?.role === 'staff'}
+        />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>

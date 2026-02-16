@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapPin, Phone, Mail, Edit2, Trash2, Home, UserPlus } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { Button, Card, Modal } from '@/components/common';
+import { Button, Card, Modal, ResidenceSelector } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { UserService, toSnake, SocietyService } from '@/services/supabase.service';
 import { User, Flat } from '@/types';
@@ -231,7 +231,6 @@ export const StaffPage: React.FC = () => {
                         isOpen={showModal}
                         onClose={() => setShowModal(false)}
                         onSubmit={handleSaveStaff}
-                        flats={flats}
                         initialData={editingStaff}
                     />
                 )}
@@ -244,11 +243,10 @@ interface StaffManagementModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: any) => void;
-    flats: Flat[];
     initialData?: any;
 }
 
-const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onClose, onSubmit, flats, initialData }) => {
+const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
         email: initialData?.email || '',
@@ -330,21 +328,13 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                 </div>
 
                 {formData.staffType === 'domestic_staff' && (
-                    <div className="space-y-1 bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                    <div className="space-y-4 bg-amber-50/50 p-4 rounded-xl border border-amber-100">
                         <label className="block text-sm font-medium text-amber-900">Map to Resident Flat</label>
-                        <select
-                            className="w-full mt-1.5 px-3 py-2 bg-white border border-amber-200 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                            value={formData.mappedFlatId}
-                            onChange={(e) => setFormData({ ...formData, mappedFlatId: e.target.value })}
+                        <ResidenceSelector
+                            initialFlatId={formData.mappedFlatId}
+                            onSelect={(flatId) => setFormData({ ...formData, mappedFlatId: flatId })}
                             required={formData.staffType === 'domestic_staff'}
-                        >
-                            <option value="">Select a flat...</option>
-                            {flats.map(flat => (
-                                <option key={flat.id} value={flat.id}>
-                                    Flat {flat.flatNumber} (Floor {flat.floor})
-                                </option>
-                            ))}
-                        </select>
+                        />
                         <p className="mt-1 text-xs text-amber-700 italic flex items-center gap-1">
                             <Home size={12} /> Domestic staff must be assigned to a specific property.
                         </p>

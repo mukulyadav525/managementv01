@@ -3,3 +3,4 @@ export { Card } from './Card';
 export { Input } from './Input';
 export { Modal } from './Modal';
 export { StatsCard } from './StatsCard';
+export { ResidenceSelector } from './ResidenceSelector';
