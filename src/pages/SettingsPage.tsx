@@ -161,6 +161,66 @@ export const SettingsPage: React.FC = () => {
                         </div>
                     </Card>
 
+                    {/* Bank Details */}
+                    <Card title="Bank Details (For Maintenance Collection)">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                                <input
+                                    type="text"
+                                    value={society?.bankDetails?.accountNumber || ''}
+                                    onChange={(e) => setSociety(s => s ? { ...s, bankDetails: { ...s.bankDetails, accountNumber: e.target.value, ifscCode: s.bankDetails?.ifscCode || '', accountHolderName: s.bankDetails?.accountHolderName || '', bankName: s.bankDetails?.bankName || '' } } : null)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter Account Number"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">IFSC Code</label>
+                                <input
+                                    type="text"
+                                    value={society?.bankDetails?.ifscCode || ''}
+                                    onChange={(e) => setSociety(s => s ? { ...s, bankDetails: { ...s.bankDetails, ifscCode: e.target.value.toUpperCase(), accountNumber: s.bankDetails?.accountNumber || '', accountHolderName: s.bankDetails?.accountHolderName || '', bankName: s.bankDetails?.bankName || '' } } : null)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter IFSC Code"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Account Holder Name</label>
+                                <input
+                                    type="text"
+                                    value={society?.bankDetails?.accountHolderName || ''}
+                                    onChange={(e) => setSociety(s => s ? { ...s, bankDetails: { ...s.bankDetails, accountHolderName: e.target.value, accountNumber: s.bankDetails?.accountNumber || '', ifscCode: s.bankDetails?.ifscCode || '', bankName: s.bankDetails?.bankName || '' } } : null)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter Name as per Bank"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+                                <input
+                                    type="text"
+                                    value={society?.bankDetails?.bankName || ''}
+                                    onChange={(e) => setSociety(s => s ? { ...s, bankDetails: { ...s.bankDetails, bankName: e.target.value, accountNumber: s.bankDetails?.accountNumber || '', ifscCode: s.bankDetails?.ifscCode || '', accountHolderName: s.bankDetails?.accountHolderName || '' } } : null)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter Bank Name"
+                                />
+                            </div>
+
+                            <div className="space-y-1 md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">UPI ID (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={society?.bankDetails?.upiId || ''}
+                                    onChange={(e) => setSociety(s => s ? { ...s, bankDetails: { ...s.bankDetails, upiId: e.target.value, accountNumber: s.bankDetails?.accountNumber || '', ifscCode: s.bankDetails?.ifscCode || '', accountHolderName: s.bankDetails?.accountHolderName || '', bankName: s.bankDetails?.bankName || '' } } : null)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="society@upi"
+                                />
+                            </div>
+                        </div>
+                    </Card>
+
                     <div className="flex justify-end pt-4">
                         <Button type="submit" disabled={saving}>
                             {saving ? 'Saving...' : (
@@ -173,6 +233,6 @@ export const SettingsPage: React.FC = () => {
                     </div>
                 </form>
             </div>
-        </Layout>
+        </Layout >
     );
 };

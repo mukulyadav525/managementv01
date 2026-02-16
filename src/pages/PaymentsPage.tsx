@@ -400,7 +400,6 @@ export const PaymentsPage: React.FC = () => {
   );
 };
 
-// Payment Modal Component
 const PaymentModal: React.FC<{
   payment: Payment;
   isOpen: boolean;
@@ -410,6 +409,51 @@ const PaymentModal: React.FC<{
   buildings: Building[];
 }> = ({ payment, isOpen, onClose, onPay, flats, buildings }) => {
   const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [receiverDetails, setReceiverDetails] = useState<any>(null);
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    const fetchReceiverDetails = async () => {
+      if (!payment || !user?.societyId) return;
+
+      try {
+        if (payment.type === 'rent') {
+          const flat = flats.find(f => f.id === payment.flatId);
+          if (flat?.ownerId) {
+            const { data } = await supabase
+              .from('users')
+              .select('bank_details, name')
+              .eq('uid', flat.ownerId)
+              .single();
+
+            if (data) {
+              setReceiverDetails({
+                name: data.name,
+                ...toCamel(data.bank_details || {})
+              });
+            }
+          }
+        } else {
+          const { data } = await supabase
+            .from('societies')
+            .select('bank_details, name')
+            .eq('id', user.societyId)
+            .single();
+
+          if (data) {
+            setReceiverDetails({
+              name: data.name,
+              ...toCamel(data.bank_details || {})
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching receiver details:', error);
+      }
+    };
+
+    fetchReceiverDetails();
+  }, [payment, flats, user?.societyId]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Make Payment">
@@ -444,6 +488,47 @@ const PaymentModal: React.FC<{
             </div>
           </div>
         </div>
+
+        {/* Receiver Bank Details */}
+        {receiverDetails && (receiverDetails.accountNumber || receiverDetails.upiId) && (
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+            <h4 className="text-sm font-semibold text-blue-900 mb-3">
+              Transfer to: {receiverDetails.name}
+            </h4>
+            <div className="space-y-2 text-sm text-blue-800">
+              {receiverDetails.bankName && (
+                <div className="flex justify-between">
+                  <span className="text-blue-600">Bank:</span>
+                  <span className="font-medium">{receiverDetails.bankName}</span>
+                </div>
+              )}
+              {receiverDetails.accountNumber && (
+                <div className="flex justify-between">
+                  <span className="text-blue-600">Account No:</span>
+                  <span className="font-medium font-mono">{receiverDetails.accountNumber}</span>
+                </div>
+              )}
+              {receiverDetails.ifscCode && (
+                <div className="flex justify-between">
+                  <span className="text-blue-600">IFSC:</span>
+                  <span className="font-medium font-mono">{receiverDetails.ifscCode}</span>
+                </div>
+              )}
+              {receiverDetails.accountHolderName && (
+                <div className="flex justify-between">
+                  <span className="text-blue-600">Beneficiary:</span>
+                  <span className="font-medium">{receiverDetails.accountHolderName}</span>
+                </div>
+              )}
+              {receiverDetails.upiId && (
+                <div className="flex justify-between border-t border-blue-200 pt-2 mt-2">
+                  <span className="text-blue-600">UPI ID:</span>
+                  <span className="font-medium font-mono">{receiverDetails.upiId}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Payment Method */}
         <div>

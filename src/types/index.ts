@@ -41,6 +41,13 @@ export interface User {
   moveInDate?: string;
   createdAt: string;
   updatedAt: string;
+  bankDetails?: {
+    accountNumber: string;
+    ifscCode: string;
+    accountHolderName: string;
+    bankName: string;
+    upiId?: string;
+  };
 }
 
 export interface Society {
@@ -67,6 +74,13 @@ export interface Society {
   };
   createdAt: string;
   updatedAt: string;
+  bankDetails?: {
+    accountNumber: string;
+    ifscCode: string;
+    accountHolderName: string;
+    bankName: string;
+    upiId?: string;
+  };
 }
 
 export interface Building {

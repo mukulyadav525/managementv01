@@ -11,7 +11,18 @@ export const ProfilePage: React.FC = () => {
     const { user, setUser } = useAuthStore();
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        name: string;
+        phone: string;
+        profilePicture: string;
+        bankDetails?: {
+            accountNumber: string;
+            ifscCode: string;
+            accountHolderName: string;
+            bankName: string;
+            upiId?: string;
+        };
+    }>({
         name: '',
         phone: '',
         profilePicture: ''
@@ -23,7 +34,14 @@ export const ProfilePage: React.FC = () => {
             setFormData({
                 name: user.name || '',
                 phone: user.phone || '',
-                profilePicture: user.profilePicture || ''
+                profilePicture: user.profilePicture || '',
+                bankDetails: user.bankDetails || {
+                    accountNumber: '',
+                    ifscCode: '',
+                    accountHolderName: '',
+                    bankName: '',
+                    upiId: ''
+                }
             });
         }
     }, [user]);
@@ -60,6 +78,7 @@ export const ProfilePage: React.FC = () => {
                     name: formData.name,
                     phone: formData.phone,
                     profilePicture: formData.profilePicture,
+                    bankDetails: formData.bankDetails,
                     updatedAt: new Date().toISOString()
                 }))
                 .eq('uid', user.uid);
@@ -71,7 +90,8 @@ export const ProfilePage: React.FC = () => {
                 ...user,
                 name: formData.name,
                 phone: formData.phone,
-                profilePicture: formData.profilePicture
+                profilePicture: formData.profilePicture,
+                bankDetails: formData.bankDetails
             });
 
             toast.success('Profile updated successfully');
@@ -180,6 +200,66 @@ export const ProfilePage: React.FC = () => {
                                         className="w-full pl-10 pr-4 py-2 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 cursor-not-allowed capitalize"
                                     />
                                 </div>
+                            </div>
+                        </div>
+
+                    </Card>
+
+                    <Card title="Bank Details (For Receiving Payments)">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                                <input
+                                    type="text"
+                                    value={formData.bankDetails?.accountNumber || ''}
+                                    onChange={e => setFormData({ ...formData, bankDetails: { ...formData.bankDetails, accountNumber: e.target.value, ifscCode: formData.bankDetails?.ifscCode || '', accountHolderName: formData.bankDetails?.accountHolderName || '', bankName: formData.bankDetails?.bankName || '' } })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter Account Number"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">IFSC Code</label>
+                                <input
+                                    type="text"
+                                    value={formData.bankDetails?.ifscCode || ''}
+                                    onChange={e => setFormData({ ...formData, bankDetails: { ...formData.bankDetails, ifscCode: e.target.value.toUpperCase(), accountNumber: formData.bankDetails?.accountNumber || '', accountHolderName: formData.bankDetails?.accountHolderName || '', bankName: formData.bankDetails?.bankName || '' } })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter IFSC Code"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Account Holder Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.bankDetails?.accountHolderName || ''}
+                                    onChange={e => setFormData({ ...formData, bankDetails: { ...formData.bankDetails, accountHolderName: e.target.value, accountNumber: formData.bankDetails?.accountNumber || '', ifscCode: formData.bankDetails?.ifscCode || '', bankName: formData.bankDetails?.bankName || '' } })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter Name as per Bank"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+                                <input
+                                    type="text"
+                                    value={formData.bankDetails?.bankName || ''}
+                                    onChange={e => setFormData({ ...formData, bankDetails: { ...formData.bankDetails, bankName: e.target.value, accountNumber: formData.bankDetails?.accountNumber || '', ifscCode: formData.bankDetails?.ifscCode || '', accountHolderName: formData.bankDetails?.accountHolderName || '' } })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="Enter Bank Name"
+                                />
+                            </div>
+
+                            <div className="space-y-1 md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">UPI ID (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={formData.bankDetails?.upiId || ''}
+                                    onChange={e => setFormData({ ...formData, bankDetails: { ...formData.bankDetails, upiId: e.target.value, accountNumber: formData.bankDetails?.accountNumber || '', ifscCode: formData.bankDetails?.ifscCode || '', accountHolderName: formData.bankDetails?.accountHolderName || '', bankName: formData.bankDetails?.bankName || '' } })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                                    placeholder="user@upi"
+                                />
                             </div>
                         </div>
 
