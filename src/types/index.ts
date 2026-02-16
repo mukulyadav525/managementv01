@@ -14,6 +14,10 @@ export type VisitorStatus = 'pending' | 'approved' | 'rejected' | 'exited';
 
 export type VaccinationStatus = 'pending' | 'vaccinated';
 
+export type ServiceStatus = 'pending' | 'in_progress' | 'resolved' | 'cancelled';
+
+export type ServiceCategory = 'plumbing' | 'electrical' | 'cleaning' | 'carpentry' | 'other';
+
 export interface User {
   uid: string;
   name: string;
@@ -298,6 +302,20 @@ export interface Pet {
   vaccinationStatus: VaccinationStatus;
   vaccinationDate?: string;
   photoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceRequest {
+  id: string;
+  societyId: string;
+  flatId: string;
+  requesterId: string;
+  category: ServiceCategory;
+  title: string;
+  description?: string;
+  preferredTime?: string;
+  status: ServiceStatus;
   createdAt: string;
   updatedAt: string;
 }

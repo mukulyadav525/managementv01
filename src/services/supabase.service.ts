@@ -430,3 +430,27 @@ export class PetService extends SupabaseService {
         return this.deleteDocument(`pets`, petId);
     }
 }
+
+// Service Request services
+export class ServiceRequestService extends SupabaseService {
+    static async getRequests(societyId: string, options?: { requesterId?: string; flatId?: string }) {
+        return this.getDocuments(`service_requests`, (q) => {
+            let res = q.eq('society_id', societyId).order('created_at', { ascending: false });
+            if (options?.requesterId) res = res.eq('requester_id', options.requesterId);
+            if (options?.flatId) res = res.eq('flat_id', options.flatId);
+            return res;
+        });
+    }
+
+    static async createRequest(societyId: string, data: any) {
+        return this.createDocument(`service_requests`, { ...data, societyId });
+    }
+
+    static async updateRequest(requestId: string, data: any) {
+        return this.updateDocument(`service_requests`, requestId, data);
+    }
+
+    static async deleteRequest(requestId: string) {
+        return this.deleteDocument(`service_requests`, requestId);
+    }
+}

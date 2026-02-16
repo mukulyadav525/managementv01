@@ -228,7 +228,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         console.warn('authStore: [INIT] Safety timeout reached! Forcing loading: false');
         set({ loading: false });
       }
-    }, 7000);
+    }, 4000);
 
     try {
       // 2. Setup listener for future state changes

@@ -25,6 +25,7 @@ import { ResidentsListPage } from './pages/ResidentsListPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { VehiclesPage } from './pages/VehiclesPage';
 import { PetsPage } from './pages/PetsPage';
+import { ServicesPage } from './pages/ServicesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SalaryPaymentsPage } from './pages/SalaryPaymentsPage';
@@ -40,22 +41,26 @@ import { RoleProtectedRoute } from './components/routing/RoleProtectedRoute';
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading, needsCompletion } = useAuthStore();
 
+  console.log(`ProtectedRoute: Render - Loading: ${loading}, User: ${user?.uid ? 'YES' : 'NO'}, NeedsCompletion: ${needsCompletion}`);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Initializing securely...</p>
         </div>
       </div>
     );
   }
 
   if (!user) {
+    console.warn('ProtectedRoute: No user found, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 
   if (needsCompletion) {
+    console.log('ProtectedRoute: User needs completion, redirecting to /complete-profile');
     return <Navigate to="/complete-profile" replace />;
   }
 
@@ -66,18 +71,21 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const DashboardRedirect: React.FC = () => {
   const { user, loading, needsCompletion } = useAuthStore();
 
+  console.log(`DashboardRedirect: Render - Loading: ${loading}, User: ${user?.uid ? 'YES' : 'NO'}, Role: ${user?.role}`);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Redirecting to dashboard...</p>
         </div>
       </div>
     );
   }
 
   if (!user) {
+    console.warn('DashboardRedirect: No user, redirecting to /login');
     return <Navigate to="/login" replace />;
   }
 
@@ -86,6 +94,7 @@ const DashboardRedirect: React.FC = () => {
   }
 
   const dashboardPath = getDashboardPath(user.role);
+  console.log(`DashboardRedirect: Navigating to ${dashboardPath}`);
   return <Navigate to={dashboardPath} replace />;
 };
 
@@ -239,6 +248,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PetsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/services"
+          element={
+            <ProtectedRoute>
+              <ServicesPage />
             </ProtectedRoute>
           }
         />
