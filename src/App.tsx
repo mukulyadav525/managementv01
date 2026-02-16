@@ -90,11 +90,15 @@ const DashboardRedirect: React.FC = () => {
 };
 
 function App() {
-  const { initializeAuth } = useAuthStore();
+  console.log('App: Component rendering...');
+  const { initializeAuth, loading, user } = useAuthStore();
 
   useEffect(() => {
+    console.log('App: useEffect mounting, calling initializeAuth()');
     initializeAuth();
   }, []);
+
+  console.log(`App: State - Loading: ${loading}, User: ${user?.email || 'None'}`);
 
   return (
     <BrowserRouter>
