@@ -8,7 +8,7 @@ import { Payment, Flat, Building } from '@/types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { supabase } from '@/config/supabase';
-import { toSnake } from '@/services/supabase.service';
+import { toSnake, toCamel } from '@/services/supabase.service';
 import { exportToCSV } from '@/utils/export';
 import { Input } from '@/components/common';
 
@@ -52,7 +52,7 @@ export const PaymentsPage: React.FC = () => {
         .select('*')
         .eq('society_id', user.societyId);
       if (error) throw error;
-      setBuildings(data as Building[]);
+      setBuildings(toCamel(data) as Building[]);
     } catch (error) {
       console.error('Error loading buildings:', error);
     }
@@ -66,7 +66,7 @@ export const PaymentsPage: React.FC = () => {
         .select('*')
         .eq('society_id', user.societyId);
       if (error) throw error;
-      setFlats(data as Flat[]);
+      setFlats(toCamel(data) as Flat[]);
     } catch (error) {
       console.error('Error loading flats:', error);
     }
@@ -330,9 +330,10 @@ export const PaymentsPage: React.FC = () => {
                                       .eq('uid', payment.userId)
                                       .single();
                                     if (error) throw error;
-                                    setSelectedUser(userData);
+                                    setSelectedUser(toCamel(userData));
                                     setShowNotificationModal(true);
                                   } catch (error) {
+                                    console.error('Error fetching resident for notification:', error);
                                     toast.error('Failed to load resident info');
                                   }
                                 }}
