@@ -316,6 +316,20 @@ export class NotificationService extends SupabaseService {
     static async markAsRead(notificationId: string) {
         return this.updateDocument(`notifications`, notificationId, { is_read: true });
     }
+
+    static async createNotification(data: {
+        userId: string;
+        societyId: string;
+        title: string;
+        message: string;
+        type: 'info' | 'warning' | 'success' | 'error';
+    }) {
+        return this.createDocument(`notifications`, {
+            ...data,
+            isRead: false,
+            createdAt: new Date().toISOString()
+        });
+    }
 }
 
 // Rent Agreement services

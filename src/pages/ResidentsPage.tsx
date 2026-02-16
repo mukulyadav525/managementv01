@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Shield, UserX, UserCheck, Phone, Mail, Edit2, Trash2, UserMinus } from 'lucide-react';
+import { Users, Shield, UserX, UserCheck, Phone, Mail, Edit2, Trash2, UserMinus, Bell, Download } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
-import { UserService, SocietyService, toSnake } from '@/services/supabase.service';
+import { UserService, SocietyService, NotificationService, toSnake } from '@/services/supabase.service';
 import { User, Building } from '@/types';
 import { supabase } from '@/config/supabase';
+import { exportToCSV } from '@/utils/export';
 import toast from 'react-hot-toast';
 
 export const ResidentsPage: React.FC = () => {
@@ -16,6 +17,7 @@ export const ResidentsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showNotificationModal, setShowNotificationModal] = useState(false);
     const [selectedResident, setSelectedResident] = useState<User | null>(null);
     const [editingResident, setEditingResident] = useState<User | null>(null);
 
@@ -253,10 +255,16 @@ export const ResidentsPage: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-900">Resident Management</h1>
                         <p className="text-gray-600 mt-1">Manage users, roles, and access permissions</p>
                     </div>
-                    <Button onClick={() => { setEditingResident(null); setShowModal(true); }}>
-                        <Users size={20} className="mr-2" />
-                        Add Resident
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" onClick={() => exportToCSV(residents, 'residents')}>
+                            <Download size={20} className="mr-2" />
+                            Export
+                        </Button>
+                        <Button onClick={() => { setEditingResident(null); setShowModal(true); }}>
+                            <Users size={20} className="mr-2" />
+                            Add Resident
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -395,6 +403,13 @@ export const ResidentsPage: React.FC = () => {
                                                     <Shield size={20} />
                                                 </button>
                                                 <button
+                                                    onClick={() => { setSelectedResident(resident); setShowNotificationModal(true); }}
+                                                    className="text-amber-600 hover:text-amber-800"
+                                                    title="Notify Resident"
+                                                >
+                                                    <Bell size={20} />
+                                                </button>
+                                                <button
                                                     onClick={() => handleDeleteResident(resident)}
                                                     className="text-red-600 hover:text-red-800"
                                                     title="Delete Resident"
@@ -409,6 +424,14 @@ export const ResidentsPage: React.FC = () => {
                         </div>
                     )}
                 </Card>
+
+                {showNotificationModal && selectedResident && (
+                    <SendNotificationModal
+                        isOpen={showNotificationModal}
+                        resident={selectedResident}
+                        onClose={() => setShowNotificationModal(false)}
+                    />
+                )}
 
                 {showDetailsModal && selectedResident && (
                     <ResidentDetailsModal
@@ -430,6 +453,88 @@ export const ResidentsPage: React.FC = () => {
                 )}
             </div>
         </Layout>
+    );
+};
+
+const SendNotificationModal: React.FC<{
+    isOpen: boolean;
+    resident: User;
+    onClose: () => void;
+}> = ({ isOpen, resident, onClose }) => {
+    const { user } = useAuthStore();
+    const [formData, setFormData] = useState({
+        title: '',
+        message: '',
+        type: 'info' as const
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user?.societyId) return;
+
+        try {
+            setLoading(true);
+            await NotificationService.createNotification({
+                userId: resident.uid,
+                societyId: user.societyId,
+                title: formData.title,
+                message: formData.message,
+                type: formData.type
+            });
+            toast.success(`Notification sent to ${resident.name}`);
+            onClose();
+        } catch (error) {
+            toast.error('Failed to send notification');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={`Notify ${resident.name}`}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">Subject</label>
+                    <input
+                        type="text"
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                        placeholder="e.g. Maintenance Reminder"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        required
+                    />
+                </div>
+                <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">Message</label>
+                    <textarea
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                        rows={4}
+                        placeholder="Type your message here..."
+                        value={formData.message}
+                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        required
+                    />
+                </div>
+                <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">Priority</label>
+                    <select
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                    >
+                        <option value="info">Information</option>
+                        <option value="warning">Warning</option>
+                        <option value="success">Success</option>
+                        <option value="error">Critical</option>
+                    </select>
+                </div>
+                <div className="flex gap-3 pt-4">
+                    <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+                    <Button type="submit" loading={loading} className="flex-1">Send Notification</Button>
+                </div>
+            </form>
+        </Modal>
     );
 };
 

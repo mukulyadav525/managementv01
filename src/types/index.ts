@@ -118,6 +118,8 @@ export interface Payment {
   flatId: string;
   userId: string;
   amount: number;
+  fineAmount?: number;
+  fineReason?: string;
   dueDate: string;
   paidDate?: string;
   status: PaymentStatus;

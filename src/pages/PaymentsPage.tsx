@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { supabase } from '@/config/supabase';
 import { toSnake } from '@/services/supabase.service';
+import { exportToCSV } from '@/utils/export';
 import { Input } from '@/components/common';
 
 export const PaymentsPage: React.FC = () => {
@@ -69,6 +70,8 @@ export const PaymentsPage: React.FC = () => {
         flatId: flat.id,
         userId: flat.owner_id, // Default to owner
         amount: formData.amount,
+        fineAmount: formData.fineAmount || 0,
+        fineReason: formData.fineAmount > 0 ? `Late payment penalty after ${format(new Date(formData.dueDate), 'MMM dd')}` : null,
         type: formData.type,
         month: formData.month,
         dueDate: formData.dueDate,
@@ -111,7 +114,10 @@ export const PaymentsPage: React.FC = () => {
     const filtered = status
       ? payments.filter(p => p.status === status)
       : payments;
-    return filtered.reduce((sum, p) => sum + p.amount, 0);
+    return filtered.reduce((sum, p) => {
+      const isOverdue = p.status === 'pending' && new Date(p.dueDate) < new Date();
+      return sum + p.amount + (isOverdue ? (p.fineAmount || 0) : 0);
+    }, 0);
   };
 
   const getStatusColor = (payment: Payment) => {
@@ -136,7 +142,7 @@ export const PaymentsPage: React.FC = () => {
                 Generate Bills
               </Button>
             )}
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => exportToCSV(payments, 'payments')}>
               <Download size={20} className="mr-2" />
               Export
             </Button>
@@ -161,7 +167,7 @@ export const PaymentsPage: React.FC = () => {
             <p className="text-sm text-gray-600">Overdue</p>
             <p className="text-2xl font-bold text-red-600 mt-2">
               ₹{payments.filter(p => p.status === 'pending' && new Date(p.dueDate) < new Date())
-                .reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                .reduce((sum, p) => sum + p.amount + (p.fineAmount || 0), 0).toLocaleString()}
             </p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
@@ -225,7 +231,12 @@ export const PaymentsPage: React.FC = () => {
                         <span className="capitalize text-gray-900">{payment.type}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-semibold text-gray-900">₹{payment.amount.toLocaleString()}</span>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900">₹{(payment.amount + (payment.status === 'pending' && new Date(payment.dueDate) < new Date() ? (payment.fineAmount || 0) : 0)).toLocaleString()}</span>
+                          {payment.status === 'pending' && new Date(payment.dueDate) < new Date() && (payment.fineAmount || 0) > 0 && (
+                            <span className="text-xs text-red-500">Includes ₹{payment.fineAmount} fine</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {format(new Date(payment.dueDate), 'MMM dd, yyyy')}
@@ -324,8 +335,13 @@ const PaymentModal: React.FC<{
             <span className="font-medium">{payment.month}</span>
           </div>
           <div className="flex justify-between border-t border-gray-200 pt-2">
-            <span className="text-gray-900 font-semibold">Amount:</span>
-            <span className="text-xl font-bold text-primary-600">₹{payment.amount.toLocaleString()}</span>
+            <span className="text-gray-900 font-semibold">Total Amount:</span>
+            <div className="text-right">
+              <span className="text-xl font-bold text-primary-600">₹{(payment.amount + (new Date(payment.dueDate) < new Date() ? (payment.fineAmount || 0) : 0)).toLocaleString()}</span>
+              {new Date(payment.dueDate) < new Date() && (payment.fineAmount || 0) > 0 && (
+                <p className="text-xs text-red-500">(Includes ₹{payment.fineAmount} late fine)</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -377,6 +393,7 @@ const GenerateBillModal: React.FC<{
   const [formData, setFormData] = useState({
     type: 'maintenance',
     amount: '',
+    fineAmount: '',
     month: format(new Date(), 'MMMM yyyy'),
     dueDate: format(new Date(), 'yyyy-MM-dd')
   });
@@ -385,7 +402,8 @@ const GenerateBillModal: React.FC<{
     e.preventDefault();
     onSubmit({
       ...formData,
-      amount: parseFloat(formData.amount)
+      amount: parseFloat(formData.amount),
+      fineAmount: formData.fineAmount ? parseFloat(formData.fineAmount) : 0
     });
   };
 
@@ -413,6 +431,13 @@ const GenerateBillModal: React.FC<{
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
           required
+        />
+        <Input
+          label="Penalty after Due Date (₹)"
+          type="number"
+          placeholder="e.g. 500"
+          value={formData.fineAmount}
+          onChange={(e) => setFormData({ ...formData, fineAmount: e.target.value })}
         />
         <Input
           label="Month"
