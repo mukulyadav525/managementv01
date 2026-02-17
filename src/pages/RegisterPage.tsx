@@ -8,7 +8,13 @@ import toast from 'react-hot-toast';
 
 export const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
-    const { signUp, signInWithGoogle } = useAuthStore();
+    const { signUp, signInWithGoogle, user } = useAuthStore();
+
+    React.useEffect(() => {
+        if (user) {
+            navigate('/dashboard');
+        }
+    }, [user, navigate]);
 
     const [formData, setFormData] = useState({
         name: '',
