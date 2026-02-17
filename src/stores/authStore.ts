@@ -83,10 +83,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   signInWithGoogle: async () => {
     try {
       set({ loading: true, error: null });
+      const redirectUrl = window.location.origin.replace(/\/$/, '') + '/login';
+      console.log('authStore: Starting Google Sign In with redirect:', redirectUrl);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
         },
       });
       if (error) throw error;
