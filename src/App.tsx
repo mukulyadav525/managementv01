@@ -33,6 +33,11 @@ import { CCTVPage } from './pages/CCTVPage';
 import { AdminSalaryPage } from './pages/admin/AdminSalaryPage';
 import { StaffPage } from './pages/admin/StaffPage';
 import { OwnerStaffPage } from './pages/OwnerStaffPage';
+import { EmergencyDirectoryPage } from './pages/EmergencyDirectoryPage';
+import { AmenityBookingPage } from './pages/AmenityBookingPage';
+import { PollsPage } from './pages/PollsPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { GatePassPage } from './pages/GatePassPage';
 
 // Components
 import { RoleProtectedRoute } from './components/routing/RoleProtectedRoute';
@@ -232,6 +237,46 @@ function App() {
           element={
             <ProtectedRoute>
               <AnnouncementsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/emergency"
+          element={
+            <ProtectedRoute>
+              <EmergencyDirectoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/amenities"
+          element={
+            <ProtectedRoute>
+              <AmenityBookingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/polls"
+          element={
+            <ProtectedRoute>
+              <PollsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute>
+              <DocumentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gatepass"
+          element={
+            <ProtectedRoute>
+              <GatePassPage />
             </ProtectedRoute>
           }
         />

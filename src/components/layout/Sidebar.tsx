@@ -16,7 +16,12 @@ import {
   Wallet,
   Wrench,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  Heart,
+  Vote,
+  FolderOpen,
+  QrCode
 } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/authStore';
@@ -52,6 +57,11 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'Vehicles', path: '/vehicles', icon: Car, roles: ['admin', 'owner', 'tenant', 'staff'] },
     { name: 'Pets', path: '/pets', icon: PawPrint, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Services', path: '/services', icon: Wrench, roles: ['admin', 'owner', 'tenant', 'staff'] },
+    { name: 'Emergencies', path: '/emergency', icon: Phone, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
+    { name: 'Amenities', path: '/amenities', icon: Heart, roles: ['admin', 'owner', 'tenant'] },
+    { name: 'Polls', path: '/polls', icon: Vote, roles: ['admin', 'owner', 'tenant'] },
+    { name: 'Documents', path: '/documents', icon: FolderOpen, roles: ['admin', 'owner', 'tenant', 'staff'] },
+    { name: 'Gate Pass', path: '/gatepass', icon: QrCode, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
   ];
 };
