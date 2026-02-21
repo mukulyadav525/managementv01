@@ -159,10 +159,8 @@ export const CompleteProfilePage: React.FC = () => {
                         </Button>
                     </form>
                 </div>
-                {/* Footer */}
-                <div className="mt-8 text-center pb-8">
-                    <p className="text-sm text-gray-500">
-                        Made with ❤️ by{' '}
+                <div className="mt-8 text-center pb-8 text-gray-400">
+                    <p className="text-sm">
                         <a
                             href="https://www.linkedin.com/in/mukulyadav525"
                             target="_blank"
@@ -181,10 +179,11 @@ export const CompleteProfilePage: React.FC = () => {
                             Priya
                         </a>
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                        © {new Date().getFullYear()} Society Manager. All Rights Reserved.
+                    <p className="text-xs mt-1 uppercase tracking-wider">
+                        All Rights Reserved © {new Date().getFullYear()}
                     </p>
                 </div>
+
             </div>
         </div>
     );
