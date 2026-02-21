@@ -29,8 +29,10 @@ export const PetModal: React.FC<PetModalProps> = ({
         flatId: '',
         vaccinationStatus: 'pending' as any,
         vaccinationDate: '',
-        ownerId: ''
+        ownerId: '',
+        floor: undefined as number | undefined
     });
+
 
     useEffect(() => {
         if (isOpen) {
@@ -42,8 +44,10 @@ export const PetModal: React.FC<PetModalProps> = ({
                     flatId: pet.flatId,
                     vaccinationStatus: pet.vaccinationStatus,
                     vaccinationDate: pet.vaccinationDate || '',
-                    ownerId: pet.ownerId
+                    ownerId: pet.ownerId,
+                    floor: undefined // Floor might not be in Pet type yet
                 });
+
             } else {
                 setFormData({
                     name: '',
@@ -52,8 +56,10 @@ export const PetModal: React.FC<PetModalProps> = ({
                     flatId: '',
                     vaccinationStatus: 'pending',
                     vaccinationDate: '',
-                    ownerId: user?.uid || ''
+                    ownerId: user?.uid || '',
+                    floor: undefined
                 });
+
             }
         }
     }, [isOpen, pet, user]);
@@ -128,15 +134,17 @@ export const PetModal: React.FC<PetModalProps> = ({
                 {/* Standardized Residence Selector */}
                 <ResidenceSelector
                     initialFlatId={formData.flatId}
-                    onSelect={(flatId, flat) => {
+                    onSelect={(flatId, flat, floor) => {
                         setFormData({
                             ...formData,
                             flatId: flatId,
-                            ownerId: flat?.ownerId || user?.uid || ''
+                            ownerId: flat?.ownerId || user?.uid || '',
+                            floor: floor
                         });
                     }}
                     showResidentInfo={true}
                 />
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">

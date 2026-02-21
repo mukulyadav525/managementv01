@@ -450,15 +450,16 @@ const AddVisitorModal: React.FC<{
         />
         <ResidenceSelector
           initialFlatId={formData.flatId}
-          onSelect={(flatId, flat) => setFormData({
+          onSelect={(flatId, flat, floor) => setFormData({
             ...formData,
             flatId,
             flatNumber: flat?.flatNumber || '',
-            floor: flat?.floor?.toString() || ''
+            floor: floor?.toString() || flat?.floor?.toString() || ''
           })}
           restrictedToUserFlats={isRestricted}
           showResidentInfo={!isRestricted}
         />
+
 
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-700">Visitor Type</label>

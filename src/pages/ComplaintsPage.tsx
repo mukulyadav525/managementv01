@@ -340,8 +340,10 @@ const AddComplaintModal: React.FC<{
     description: '',
     priority: 'medium',
     images: [] as File[],
-    flatId: ''
+    flatId: '',
+    floor: undefined as number | undefined
   });
+
   const { user } = useAuthStore();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,8 +354,10 @@ const AddComplaintModal: React.FC<{
       description: '',
       priority: 'medium',
       images: [],
-      flatId: ''
+      flatId: '',
+      floor: undefined
     });
+
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,10 +378,11 @@ const AddComplaintModal: React.FC<{
 
         <ResidenceSelector
           initialFlatId={formData.flatId}
-          onSelect={(flatId) => setFormData({ ...formData, flatId })}
+          onSelect={(flatId, _, floor) => setFormData({ ...formData, flatId, floor })}
           restrictedToUserFlats={user?.role !== 'admin' && user?.role !== 'staff'}
           showResidentInfo={user?.role === 'admin' || user?.role === 'staff'}
         />
+
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>

@@ -323,8 +323,10 @@ const VehicleModal: React.FC<{
         vType: initialData?.v_type || 'car',
         parkingSlot: initialData?.parking_slot || '',
         userId: initialUserId,
-        flatId: initialFlatId
+        flatId: initialFlatId,
+        floor: undefined as number | undefined
     });
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -361,10 +363,11 @@ const VehicleModal: React.FC<{
                 {/* Unified Residence Selection */}
                 <ResidenceSelector
                     initialFlatId={formData.flatId}
-                    onSelect={(flatId) => setFormData({ ...formData, flatId })}
+                    onSelect={(flatId, _, floor) => setFormData({ ...formData, flatId, floor })}
                     restrictedToUserFlats={userRole !== 'admin' && userRole !== 'staff'}
                     showResidentInfo={userRole === 'admin' || userRole === 'staff'}
                 />
+
 
                 <div className="grid grid-cols-1 gap-4">
                     <div>

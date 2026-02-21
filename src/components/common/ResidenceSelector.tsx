@@ -4,7 +4,7 @@ import { Flat, Building } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 
 interface ResidenceSelectorProps {
-    onSelect: (flatId: string, flat?: Flat) => void;
+    onSelect: (flatId: string, flat?: Flat, floor?: number) => void;
     initialFlatId?: string;
     required?: boolean;
     className?: string;
@@ -26,6 +26,7 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
     const [allFlats, setAllFlats] = useState<Flat[]>([]);
     const [selectedBuilding, setSelectedBuilding] = useState<string>('');
     const [selectedFlatId, setSelectedFlatId] = useState<string>(initialFlatId || '');
+    const [selectedFloor, setSelectedFloor] = useState<number | ''>('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -40,6 +41,7 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
             if (flat) {
                 setSelectedBuilding(flat.buildingId);
                 setSelectedFlatId(flat.id);
+                setSelectedFloor(flat.floor);
             }
         }
     }, [initialFlatId, allFlats]);
@@ -74,21 +76,37 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
         const val = e.target.value;
         setSelectedBuilding(val);
         setSelectedFlatId('');
-        onSelect('');
+        setSelectedFloor('');
+        onSelect('', undefined, undefined);
     };
 
     const handleFlatChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const val = e.target.value;
         setSelectedFlatId(val);
         const flat = allFlats.find(f => f.id === val);
-        onSelect(val, flat);
+        if (flat) {
+            setSelectedFloor(flat.floor);
+            onSelect(val, flat, flat.floor);
+        } else {
+            setSelectedFloor('');
+            onSelect(val, undefined, undefined);
+        }
+    };
+
+    const handleFloorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value ? parseInt(e.target.value) : '';
+        setSelectedFloor(val);
+        const flat = allFlats.find(f => f.id === selectedFlatId);
+        onSelect(selectedFlatId, flat, val === '' ? undefined : val);
     };
 
     const filteredFlatsByBuilding = selectedBuilding
         ? allFlats.filter(f => f.buildingId === selectedBuilding)
         : [];
 
-    const currentFlat = allFlats.find(f => f.id === selectedFlatId);
+    const currentBuilding = buildings.find(b => b.id === selectedBuilding);
+    const maxFloors = currentBuilding?.totalFloors || 0;
+    const floorOptions = Array.from({ length: maxFloors }, (_, i) => i + 1);
 
     if (loading) return <div className="text-xs text-gray-400 animate-pulse">Loading residence options...</div>;
 
@@ -129,25 +147,33 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
                 </div>
             </div>
 
-            {/* 3. Floor No - Purely Informational/Auto-filled */}
-            {selectedFlatId && currentFlat && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 3. Floor Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700">Floor {required && '*'}</label>
+                    <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm disabled:bg-gray-50"
+                        value={selectedFloor}
+                        onChange={handleFloorChange}
+                        disabled={!selectedFlatId}
+                        required={required}
+                    >
+                        <option value="">Select Floor...</option>
+                        {floorOptions.map(floor => (
+                            <option key={floor} value={floor}>Floor {floor}</option>
+                        ))}
+                    </select>
+                </div>
+                {showResidentInfo && selectedFlatId && (
                     <div className="space-y-1">
-                        <label className="block text-sm font-medium text-gray-700">Floor</label>
-                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
-                            {currentFlat.floor === 0 ? 'Ground Floor' : `Floor ${currentFlat.floor}`}
+                        <label className="block text-sm font-medium text-gray-700">Resident</label>
+                        <div className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-md text-xs text-blue-700 italic">
+                            {allFlats.find(f => f.id === selectedFlatId)?.ownerId === user?.uid ? 'You (Owner)' : 'Assigned Resident'}
                         </div>
                     </div>
-                    {showResidentInfo && (
-                        <div className="space-y-1">
-                            <label className="block text-sm font-medium text-gray-700">Resident</label>
-                            <div className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-md text-xs text-blue-700 italic">
-                                {currentFlat.ownerId === user?.uid ? 'You (Owner)' : 'Assigned Resident'}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };
+

@@ -27,9 +27,11 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
         category: 'plumbing' as ServiceCategory,
         description: '',
         flatId: '',
+        floor: undefined as number | undefined,
         preferredTime: '',
         requesterId: ''
     });
+
 
     useEffect(() => {
         if (isOpen) {
@@ -39,18 +41,22 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
                     category: request.category,
                     description: request.description || '',
                     flatId: request.flatId,
+                    floor: undefined, // Floor information might not be in ServiceRequest type yet
                     preferredTime: request.preferredTime || '',
                     requesterId: request.requesterId
                 });
+
             } else {
                 setFormData({
                     title: '',
                     category: 'plumbing',
                     description: '',
                     flatId: '',
+                    floor: undefined,
                     preferredTime: '',
                     requesterId: user?.uid || ''
                 });
+
             }
         }
     }, [isOpen, request, user]);
@@ -119,9 +125,10 @@ export const ServiceRequestModal: React.FC<ServiceRequestModalProps> = ({
 
                 <ResidenceSelector
                     initialFlatId={formData.flatId}
-                    onSelect={(flatId) => setFormData({ ...formData, flatId })}
+                    onSelect={(flatId, _, floor) => setFormData({ ...formData, flatId, floor })}
                     showResidentInfo={true}
                 />
+
 
                 <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700">Description</label>

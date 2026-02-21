@@ -252,8 +252,10 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         email: initialData?.email || '',
         phone: initialData?.phone || '',
         staffType: initialData?.staffType || 'society_staff',
-        mappedFlatId: initialData?.flatIds?.[0] || ''
+        mappedFlatId: initialData?.flatIds?.[0] || '',
+        floor: undefined as number | undefined
     });
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -332,9 +334,10 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                         <label className="block text-sm font-medium text-amber-900">Map to Resident Flat</label>
                         <ResidenceSelector
                             initialFlatId={formData.mappedFlatId}
-                            onSelect={(flatId) => setFormData({ ...formData, mappedFlatId: flatId })}
+                            onSelect={(flatId, _, floor) => setFormData({ ...formData, mappedFlatId: flatId, floor })}
                             required={formData.staffType === 'domestic_staff'}
                         />
+
                         <p className="mt-1 text-xs text-amber-700 italic flex items-center gap-1">
                             <Home size={12} /> Domestic staff must be assigned to a specific property.
                         </p>
