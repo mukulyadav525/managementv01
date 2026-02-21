@@ -34,7 +34,7 @@ export const Header: React.FC = () => {
   const loadNotifications = async () => {
     if (!user) return;
     try {
-      const data = await NotificationService.getNotifications(user.uid) as Notification[];
+      const data = await NotificationService.getNotifications(user.uid, user.societyId) as Notification[];
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.isRead).length);
     } catch (error) {

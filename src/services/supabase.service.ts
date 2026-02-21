@@ -307,11 +307,14 @@ export class AnnouncementService extends SupabaseService {
 
 // Notification services
 export class NotificationService extends SupabaseService {
-    static async getNotifications(userId: string) {
-        return this.getDocuments(`notifications`, (q) =>
-            q.eq('user_id', userId).order('created_at', { ascending: false })
-        );
+    static async getNotifications(userId: string, societyId?: string) {
+        return this.getDocuments(`notifications`, (q) => {
+            let res = q.eq('user_id', userId).order('created_at', { ascending: false });
+            if (societyId) res = res.eq('society_id', societyId);
+            return res;
+        });
     }
+
 
     static async markAsRead(notificationId: string) {
         return this.updateDocument(`notifications`, notificationId, { is_read: true });

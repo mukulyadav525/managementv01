@@ -274,6 +274,7 @@ export interface Notification {
   title: string;
   message: string;
   type: 'info' | 'warning' | 'success' | 'error';
+  societyId: string;
   isRead: boolean;
   createdAt: string;
 }
