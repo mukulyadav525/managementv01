@@ -28,7 +28,9 @@ import {
     PetService,
     ServiceRequestService
 } from '@/services/supabase.service';
+import { Flat, Building } from '@/types';
 import { supabase } from '@/config/supabase';
+
 
 
 export const AdminDashboardPage: React.FC = () => {
@@ -53,7 +55,10 @@ export const AdminDashboardPage: React.FC = () => {
 
     const [payments, setPayments] = useState<any[]>([]);
     const [complaints, setComplaints] = useState<any[]>([]);
+    const [flats, setFlats] = useState<Flat[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
     const [loading, setLoading] = useState(true);
+
 
     useEffect(() => {
         loadDashboardData();
@@ -91,14 +96,20 @@ export const AdminDashboardPage: React.FC = () => {
             ).length;
 
             // Load flats for stats
-            const flats = await SocietyService.getFlats(user.societyId);
-            const totalFlats = flats.length;
-            const occupiedFlats = flats.filter((f: any) =>
+            const flatsData = await SocietyService.getFlats(user.societyId);
+            setFlats(flatsData as Flat[]);
+            const totalFlats = flatsData.length;
+            const occupiedFlats = flatsData.filter((f: any) =>
                 f.occupancyStatus === 'rented' || f.occupancyStatus === 'owner-occupied'
             ).length;
             const vacantFlats = totalFlats - occupiedFlats;
 
+            // Load buildings
+            const buildingsData = await SocietyService.getBuildings(user.societyId);
+            setBuildings(buildingsData as Building[]);
+
             // Load tenants
+
             const tenants = await UserService.getUsers(user.societyId, 'tenant');
             const totalTenants = tenants.length;
 
@@ -286,9 +297,16 @@ export const AdminDashboardPage: React.FC = () => {
                             {payments.slice(0, 5).map((payment: any) => (
                                 <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
-                                        <p className="font-medium text-gray-900">Flat {payment.flatId}</p>
+                                        <p className="font-medium text-gray-900">
+                                            {(() => {
+                                                const flat = flats.find(f => f.id === payment.flatId);
+                                                const building = buildings.find(b => b.id === flat?.buildingId);
+                                                return flat ? `${building ? building.name + ' - ' : ''}${flat.flatNumber}` : `Flat ${payment.flatId}`;
+                                            })()}
+                                        </p>
                                         <p className="text-sm text-gray-500">{payment.type}</p>
                                     </div>
+
                                     <div className="text-right">
                                         <p className={`font-semibold ${payment.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
                                             ₹{payment.amount.toLocaleString()}
@@ -312,8 +330,15 @@ export const AdminDashboardPage: React.FC = () => {
                                     <div key={complaint.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
                                         <div className="flex-1">
                                             <p className="font-medium text-gray-900">{complaint.title}</p>
-                                            <p className="text-sm text-gray-500">Flat {complaint.flatId}</p>
+                                            <p className="text-sm text-gray-500">
+                                                {(() => {
+                                                    const flat = flats.find(f => f.id === complaint.flatId);
+                                                    const building = buildings.find(b => b.id === flat?.buildingId);
+                                                    return flat ? `${building ? building.name + ' - ' : ''}${flat.flatNumber}` : `Flat ${complaint.flatId}`;
+                                                })()}
+                                            </p>
                                         </div>
+
                                         <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
                                             {complaint.priority}
                                         </span>
