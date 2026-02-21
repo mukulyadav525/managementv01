@@ -5,98 +5,48 @@ import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
 
-interface Document {
-    id: string;
-    name: string;
-    category: 'society' | 'personal';
-    type: string;
-    size: string;
-    uploadedDate: string;
-    uploadedBy: string;
-    fileUrl: string;
-    isPublic: boolean;
-}
+import { DocumentService } from '@/services/supabase.service';
+import { Document as DocType } from '@/types';
 
 export const DocumentsPage: React.FC = () => {
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'society' | 'personal'>('society');
     const [searchQuery, setSearchQuery] = useState('');
-    const [documents, setDocuments] = useState<Document[]>([]);
+    const [documents, setDocuments] = useState<DocType[]>([]);
 
     useEffect(() => {
-        // Simulated data fetching
-        setTimeout(() => {
-            setDocuments([
-                {
-                    id: 'd1',
-                    name: 'Society Bye-Laws 2024.pdf',
-                    category: 'society',
-                    type: 'PDF',
-                    size: '1.2 MB',
-                    uploadedDate: '2024-01-10',
-                    uploadedBy: 'Admin',
-                    fileUrl: '#',
-                    isPublic: true
-                },
-                {
-                    id: 'd2',
-                    name: 'Monthly Meeting Minutes - Jan.pdf',
-                    category: 'society',
-                    type: 'PDF',
-                    size: '450 KB',
-                    uploadedDate: '2026-02-05',
-                    uploadedBy: 'Admin',
-                    fileUrl: '#',
-                    isPublic: true
-                },
-                {
-                    id: 'd3',
-                    name: 'Fire Safety Certificate.jpg',
-                    category: 'society',
-                    type: 'Image',
-                    size: '2.5 MB',
-                    uploadedDate: '2025-12-15',
-                    uploadedBy: 'Security',
-                    fileUrl: '#',
-                    isPublic: true
-                },
-                {
-                    id: 'd4',
-                    name: 'NOC for Renovation.pdf',
-                    category: 'personal',
-                    type: 'PDF',
-                    size: '320 KB',
-                    uploadedDate: '2026-02-20',
-                    uploadedBy: user?.name || 'You',
-                    fileUrl: '#',
-                    isPublic: false
-                },
-                {
-                    id: 'd5',
-                    name: 'Electricity Meter Receipt.pdf',
-                    category: 'personal',
-                    type: 'PDF',
-                    size: '180 KB',
-                    uploadedDate: '2026-02-18',
-                    uploadedBy: user?.name || 'You',
-                    fileUrl: '#',
-                    isPublic: false
-                }
-            ]);
+        if (user?.societyId) {
+            loadDocs();
+        }
+    }, [user, activeTab]);
+
+    const loadDocs = async () => {
+        setLoading(true);
+        try {
+            const data = await DocumentService.getDocumentsEx(user!.societyId, activeTab);
+            setDocuments(data as DocType[]);
+        } catch (error) {
+            toast.error('Failed to load documents');
+        } finally {
             setLoading(false);
-        }, 1000);
-    }, [user]);
+        }
+    };
 
     const filteredDocs = documents.filter(doc =>
         doc.category === activeTab &&
         doc.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this document?')) return;
-        setDocuments(prev => prev.filter(d => d.id !== id));
-        toast.success('Document removed from vault');
+        try {
+            await DocumentService.deleteDocumentEx(id);
+            toast.success('Document removed from vault');
+            loadDocs();
+        } catch (error) {
+            toast.error('Failed to delete document');
+        }
     };
 
     const handleUpload = () => {
@@ -188,15 +138,15 @@ export const DocumentsPage: React.FC = () => {
                                         <div className="flex-1">
                                             <h4 className="font-bold text-gray-900 leading-tight mb-1 truncate" title={doc.name}>{doc.name}</h4>
                                             <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-4">
-                                                <span>{doc.type}</span>
+                                                <span>{doc.docType}</span>
                                                 <span>•</span>
-                                                <span>{doc.size}</span>
+                                                <span>{doc.fileSize}</span>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] text-gray-400 font-medium">Uploaded on</span>
-                                                <span className="text-xs font-bold text-gray-700">{doc.uploadedDate}</span>
+                                                <span className="text-xs font-bold text-gray-700">{new Date(doc.createdAt).toLocaleDateString()}</span>
                                             </div>
                                             <a
                                                 href={doc.fileUrl}

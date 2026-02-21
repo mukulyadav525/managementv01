@@ -5,29 +5,11 @@ import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
 
-interface Amenity {
-    id: string;
-    name: string;
-    description: string;
-    location: string;
-    capacity: number;
-    image?: string;
-    status: 'available' | 'maintenance' | 'closed';
-    bookingType: 'slot' | 'full_day';
-    pricePerHour?: number;
-}
-
-interface Booking {
-    id: string;
-    amenityId: string;
-    bookedBy: string;
-    bookedByName: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    status: 'confirmed' | 'cancelled' | 'pending';
-    createdAt: string;
-}
+import {
+    Amenity,
+    AmenityBooking as Booking
+} from '@/types';
+import { AmenityService } from '@/services/supabase.service';
 
 export const AmenityBookingPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -36,65 +18,26 @@ export const AmenityBookingPage: React.FC = () => {
     const [myBookings, setMyBookings] = useState<Booking[]>([]);
 
     useEffect(() => {
-        // Simulated data fetching
-        setTimeout(() => {
-            setAmenities([
-                {
-                    id: '1',
-                    name: 'Clubhouse Main Hall',
-                    description: 'Spacious hall for parties and community gatherings. Features AV system and seating.',
-                    location: 'Block A, Ground Floor',
-                    capacity: 100,
-                    status: 'available',
-                    bookingType: 'full_day',
-                    pricePerHour: 500,
-                },
-                {
-                    id: '2',
-                    name: 'Swimming Pool',
-                    description: 'Temperature controlled olympic size swimming pool with lifeguard.',
-                    location: 'Amenities Area',
-                    capacity: 30,
-                    status: 'available',
-                    bookingType: 'slot',
-                },
-                {
-                    id: '3',
-                    name: 'Badminton Court',
-                    description: 'Indoor wooden floor court. Please bring your own equipment.',
-                    location: 'Sports Complex',
-                    capacity: 4,
-                    status: 'available',
-                    bookingType: 'slot',
-                    pricePerHour: 100,
-                },
-                {
-                    id: '4',
-                    name: 'Gymnasium',
-                    description: 'Full scale gym with modern equipment and trainer assistance.',
-                    location: 'Block B, 1st Floor',
-                    capacity: 15,
-                    status: 'maintenance',
-                    bookingType: 'slot',
-                },
-            ]);
-
-            setMyBookings([
-                {
-                    id: 'b1',
-                    amenityId: '2',
-                    bookedBy: user?.uid || '',
-                    bookedByName: user?.name || '',
-                    date: new Date().toISOString().split('T')[0],
-                    startTime: '07:00',
-                    endTime: '08:00',
-                    status: 'confirmed',
-                    createdAt: new Date().toISOString(),
-                }
-            ]);
-            setLoading(false);
-        }, 1000);
+        if (user?.societyId) {
+            loadData();
+        }
     }, [user]);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [amenitiesData, bookingsData] = await Promise.all([
+                AmenityService.getAmenities(user!.societyId),
+                AmenityService.getBookings(user!.societyId, { userId: user!.uid })
+            ]);
+            setAmenities(amenitiesData as Amenity[]);
+            setMyBookings(bookingsData as any[]);
+        } catch (error) {
+            toast.error('Failed to load amenities');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleBooking = (amenity: Amenity) => {
         if (amenity.status !== 'available') {
@@ -243,11 +186,11 @@ export const AmenityBookingPage: React.FC = () => {
                                                     <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
                                                         <span className="flex items-center gap-1">
                                                             <Calendar size={12} />
-                                                            {booking.date}
+                                                            {new Date(booking.startTime).toLocaleDateString()}
                                                         </span>
                                                         <span className="flex items-center gap-1">
                                                             <Clock size={12} />
-                                                            {booking.startTime} - {booking.endTime}
+                                                            {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     </div>
                                                 </div>

@@ -5,24 +5,8 @@ import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
 
-interface PollOption {
-    id: string;
-    text: string;
-    votes: number;
-}
-
-interface Poll {
-    id: string;
-    title: string;
-    description: string;
-    options: PollOption[];
-    totalVotes: number;
-    status: 'active' | 'closed';
-    endDate: string;
-    createdBy: string;
-    votedBy: string[]; // List of user IDs who have voted
-    category: 'general' | 'financial' | 'event' | 'committee';
-}
+import { PollService } from '@/services/supabase.service';
+import { Poll } from '@/types';
 
 export const PollsPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -30,85 +14,45 @@ export const PollsPage: React.FC = () => {
     const [polls, setPolls] = useState<Poll[]>([]);
 
     useEffect(() => {
-        // Simulated data fetching
-        setTimeout(() => {
-            setPolls([
-                {
-                    id: 'p1',
-                    title: 'Annual Society Maintenance Hike',
-                    description: 'A proposal to increase maintenance by 5% to cover rising security and cleaning costs from next quarter.',
-                    options: [
-                        { id: 'o1', text: 'Approve (5% Hike)', votes: 42 },
-                        { id: 'o2', text: 'Reject (Keep same)', votes: 15 },
-                        { id: 'o3', text: 'Need more discussion', votes: 8 }
-                    ],
-                    totalVotes: 65,
-                    status: 'active',
-                    endDate: '2026-03-01',
-                    createdBy: 'admin_1',
-                    votedBy: [],
-                    category: 'financial'
-                },
-                {
-                    id: 'p2',
-                    title: 'Holi Celebration Event Venue',
-                    description: 'Where should we organize the society Holi colors event this year?',
-                    options: [
-                        { id: 'o4', text: 'Central Park', votes: 28 },
-                        { id: 'o5', text: 'Clubhouse Lawn', votes: 35 },
-                        { id: 'o6', text: 'Basement Parking (Secondary)', votes: 5 }
-                    ],
-                    totalVotes: 68,
-                    status: 'active',
-                    endDate: '2026-02-28',
-                    createdBy: 'admin_1',
-                    votedBy: [user?.uid || ''],
-                    category: 'event'
-                },
-                {
-                    id: 'p3',
-                    title: 'New Security Guard Vendor Selection',
-                    description: 'Voting for the new security agency for the upcoming financial year.',
-                    options: [
-                        { id: 'o7', text: 'Z-Security Services', votes: 50 },
-                        { id: 'o8', text: 'Elite Guard Agency', votes: 12 }
-                    ],
-                    totalVotes: 62,
-                    status: 'closed',
-                    endDate: '2026-01-15',
-                    createdBy: 'admin_1',
-                    votedBy: [user?.uid || ''],
-                    category: 'general'
-                }
-            ]);
-            setLoading(false);
-        }, 1000);
+        if (user?.societyId) {
+            loadPolls();
+        }
     }, [user]);
 
-    const handleVote = (pollId: string, optionId: string) => {
+    const loadPolls = async () => {
+        setLoading(true);
+        try {
+            const data = await PollService.getPolls(user!.societyId);
+            setPolls(data as Poll[]);
+        } catch (error) {
+            toast.error('Failed to load polls');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVote = async (pollId: string, optionId: string) => {
         const poll = polls.find(p => p.id === pollId);
         if (poll?.status === 'closed') {
             toast.error('This poll is already closed');
             return;
         }
-        if (poll?.votedBy.includes(user?.uid || '')) {
+
+        const hasVoted = poll?.votes?.some(v => v.userId === user?.uid);
+        if (hasVoted) {
             toast.error('You have already voted in this poll');
             return;
         }
 
-        setPolls(prev => prev.map(p => {
-            if (p.id === pollId) {
-                return {
-                    ...p,
-                    totalVotes: p.totalVotes + 1,
-                    votedBy: [...p.votedBy, user?.uid || ''],
-                    options: p.options.map(o => o.id === optionId ? { ...o, votes: o.votes + 1 } : o)
-                };
-            }
-            return p;
-        }));
-
-        toast.success('Your vote has been recorded securely!');
+        try {
+            // Find user's flat for the vote record if needed
+            const flatId = user?.flatIds?.[0] || 'unknown';
+            await PollService.castVote(pollId, optionId, user!.uid, flatId);
+            toast.success('Your vote has been recorded securely!');
+            loadPolls();
+        } catch (error) {
+            toast.error('Failed to cast vote');
+        }
     };
 
     const calculatePercentage = (votes: number, total: number) => {
@@ -135,7 +79,7 @@ export const PollsPage: React.FC = () => {
                 {/* Categories / Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <StatsCard title="Active Polls" value={polls.filter(p => p.status === 'active').length} icon={Vote} color="blue" />
-                    <StatsCard title="Total Votes Cast" value={polls.reduce((acc, p) => acc + p.totalVotes, 0)} icon={CheckCircle2} color="green" />
+                    <StatsCard title="Total Votes Cast" value={polls.reduce((acc, p) => acc + (p.totalVotes || 0), 0)} icon={CheckCircle2} color="green" />
                     <StatsCard title="Participation Rate" value="78%" icon={Users} color="purple" />
                 </div>
 
@@ -153,7 +97,7 @@ export const PollsPage: React.FC = () => {
                         ) : (
                             <div className="space-y-6">
                                 {polls.filter(p => p.status === 'active').map(poll => {
-                                    const hasVoted = poll.votedBy.includes(user?.uid || '');
+                                    const hasVoted = poll.votes?.some(v => v.userId === user?.uid);
                                     return (
                                         <Card key={poll.id} className={`overflow-hidden border-l-4 ${hasVoted ? 'border-l-primary-500' : 'border-l-yellow-400'}`}>
                                             <div className="p-6">
@@ -163,15 +107,16 @@ export const PollsPage: React.FC = () => {
                                                     </span>
                                                     <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                                                         <Clock size={14} />
-                                                        Ends {new Date(poll.endDate).toLocaleDateString()}
+                                                        Ends {poll.endsAt ? new Date(poll.endsAt).toLocaleDateString() : 'No expiry'}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-xl font-bold text-gray-900 mb-2">{poll.title}</h3>
                                                 <p className="text-gray-600 text-sm mb-6">{poll.description}</p>
 
                                                 <div className="space-y-4">
-                                                    {poll.options.map(option => {
-                                                        const percentage = calculatePercentage(option.votes, poll.totalVotes);
+                                                    {poll.options?.map(option => {
+                                                        const optVotes = poll.votes?.filter((v: any) => v.optionId === option.id).length || 0;
+                                                        const percentage = calculatePercentage(optVotes, poll.totalVotes || 0);
                                                         return (
                                                             <div key={option.id} className="relative">
                                                                 {hasVoted ? (
@@ -186,7 +131,7 @@ export const PollsPage: React.FC = () => {
                                                                                 style={{ width: `${percentage}%` }}
                                                                             ></div>
                                                                         </div>
-                                                                        <p className="text-[10px] text-gray-400">{option.votes} votes</p>
+                                                                        <p className="text-[10px] text-gray-400">{optVotes} votes</p>
                                                                     </div>
                                                                 ) : (
                                                                     <button
@@ -230,7 +175,7 @@ export const PollsPage: React.FC = () => {
                                         <div className="flex items-start justify-between mb-2">
                                             <div>
                                                 <h4 className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{poll.title}</h4>
-                                                <p className="text-xs text-gray-400 mt-0.5">Finalized on {new Date(poll.endDate).toLocaleDateString()}</p>
+                                                <p className="text-xs text-gray-400 mt-0.5">Finalized on {poll.endsAt ? new Date(poll.endsAt).toLocaleDateString() : 'N/A'}</p>
                                             </div>
                                             <div className="bg-gray-100 text-gray-500 p-2 rounded-lg">
                                                 <FileText size={18} />

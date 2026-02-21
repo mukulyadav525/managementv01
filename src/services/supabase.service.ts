@@ -471,3 +471,138 @@ export class ServiceRequestService extends SupabaseService {
         return this.deleteDocument(`service_requests`, requestId);
     }
 }
+
+// Amenity services
+export class AmenityService extends SupabaseService {
+    static async getAmenities(societyId: string) {
+        return this.getDocuments(`amenities`, (q) => q.eq('society_id', societyId).order('name'));
+    }
+
+    static async createAmenity(data: any) {
+        return this.createDocument(`amenities`, data);
+    }
+
+    static async updateAmenity(amenityId: string, data: any) {
+        return this.updateDocument(`amenities`, amenityId, data);
+    }
+
+    static async deleteAmenity(amenityId: string) {
+        return this.deleteDocument(`amenities`, amenityId);
+    }
+
+    static async getBookings(societyId: string, options?: { amenityId?: string, userId?: string }) {
+        return this.getDocuments(`amenity_bookings`, (q) => {
+            let res = q.eq('society_id', societyId).order('start_time', { ascending: false });
+            if (options?.amenityId) res = res.eq('amenity_id', options.amenityId);
+            if (options?.userId) res = res.eq('user_id', options.userId);
+            return res;
+        });
+    }
+
+    static async createBooking(data: any) {
+        return this.createDocument(`amenity_bookings`, data);
+    }
+}
+
+// Emergency Contact services
+export class EmergencyService extends SupabaseService {
+    static async getContacts(societyId: string) {
+        return this.getDocuments(`emergency_contacts`, (q) => q.eq('society_id', societyId).order('category'));
+    }
+
+    static async createContact(data: any) {
+        return this.createDocument(`emergency_contacts`, data);
+    }
+
+    static async updateContact(contactId: string, data: any) {
+        return this.updateDocument(`emergency_contacts`, contactId, data);
+    }
+
+    static async deleteContact(contactId: string) {
+        return this.deleteDocument(`emergency_contacts`, contactId);
+    }
+}
+
+// Poll services
+export class PollService extends SupabaseService {
+    static async getPolls(societyId: string) {
+        const polls = await this.getDocuments<any>(`polls`, (q) =>
+            q.eq('society_id', societyId).order('created_at', { ascending: false })
+        );
+
+        // Fetch options and votes for each poll
+        const pollsWithDetails = await Promise.all(polls.map(async (poll) => {
+            const { data: options } = await supabase
+                .from('poll_options')
+                .select('*')
+                .eq('poll_id', poll.id)
+                .order('order_index');
+
+            const { data: votes } = await supabase
+                .from('poll_votes')
+                .select('*')
+                .eq('poll_id', poll.id);
+
+            return {
+                ...poll,
+                options: toCamel(options),
+                totalVotes: votes?.length || 0,
+                votes: toCamel(votes)
+            };
+        }));
+
+        return pollsWithDetails;
+    }
+
+    static async createPoll(data: any, options: string[]) {
+        const poll = await this.createDocument(`polls`, data);
+        const optionsData = options.map((text, index) => ({
+            poll_id: poll.id,
+            text,
+            order_index: index
+        }));
+
+        const { error } = await supabase.from('poll_options').insert(optionsData);
+        if (error) throw error;
+
+        return poll;
+    }
+
+    static async castVote(pollId: string, optionId: string, userId: string, flatId: string) {
+        const { error } = await supabase.from('poll_votes').insert([{
+            poll_id: pollId,
+            option_id: optionId,
+            user_id: userId,
+            flat_id: flatId
+        }]);
+        if (error) throw error;
+    }
+
+    static async closePoll(pollId: string) {
+        return this.updateDocument(`polls`, pollId, { status: 'closed' });
+    }
+
+    static async deletePoll(pollId: string) {
+        return this.deleteDocument(`polls`, pollId);
+    }
+}
+
+// Document services
+export class DocumentService extends SupabaseService {
+    static async getDocumentsEx(societyId: string, category?: 'society' | 'personal', userId?: string) {
+        return this.getDocuments(`documents`, (q) => {
+            let res = q.eq('society_id', societyId).order('created_at', { ascending: false });
+            if (category) res = res.eq('category', category);
+            if (category === 'personal' && userId) res = res.eq('owner_id', userId);
+            return res;
+        });
+    }
+
+    static async createDocumentEx(data: any) {
+        return this.createDocument(`documents`, data);
+    }
+
+    static async deleteDocumentEx(docId: string) {
+        return this.deleteDocument(`documents`, docId);
+    }
+}

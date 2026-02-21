@@ -337,3 +337,94 @@ export interface ServiceRequest {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Amenity {
+  id: string;
+  societyId: string;
+  name: string;
+  description?: string;
+  location?: string;
+  capacity?: number;
+  bookingType: 'slot' | 'full_day';
+  rules: string[];
+  imageUrl?: string;
+  status: 'available' | 'maintenance' | 'closed';
+  pricePerHour?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AmenityBooking {
+  id: string;
+  amenityId: string;
+  userId: string;
+  societyId: string;
+  flatId: string;
+  startTime: string;
+  endTime: string;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  totalPrice?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface EmergencyContact {
+  id: string;
+  societyId: string;
+  category: 'emergency' | 'society' | 'medical' | 'essential';
+  name: string;
+  role?: string;
+  phone: string;
+  phone2?: string;
+  email?: string;
+  description?: string;
+  isVerified: boolean;
+  createdAt: string;
+}
+
+export interface Poll {
+  id: string;
+  societyId: string;
+  title: string;
+  description?: string;
+  category: 'financial' | 'event' | 'general';
+  status: 'active' | 'closed';
+  endsAt?: string;
+  createdBy: string;
+  createdAt: string;
+  options?: PollOption[];
+  myVote?: PollVote;
+  votes?: PollVote[];
+  totalVotes?: number;
+}
+
+export interface PollOption {
+  id: string;
+  pollId: string;
+  text: string;
+  orderIndex: number;
+  voteCount?: number;
+}
+
+export interface PollVote {
+  id: string;
+  pollId: string;
+  optionId: string;
+  userId: string;
+  flatId: string;
+  createdAt: string;
+}
+
+export interface Document {
+  id: string;
+  societyId: string;
+  name: string;
+  category: 'society' | 'personal';
+  docType: string;
+  fileSize: string;
+  fileUrl: string;
+  isPublic: boolean;
+  uploadedBy: string;
+  ownerId?: string;
+  createdAt: string;
+}

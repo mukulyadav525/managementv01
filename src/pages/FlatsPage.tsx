@@ -7,6 +7,7 @@ import { SocietyService, toSnake } from '@/services/supabase.service';
 import { Flat, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
+import { predictFloor } from '@/utils/flat.utils';
 
 export const FlatsPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -476,7 +477,15 @@ const FlatModal: React.FC<{
                 <Input
                     label="Flat Number"
                     value={formData.flatNumber}
-                    onChange={(e) => setFormData({ ...formData, flatNumber: e.target.value })}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        const predicted = predictFloor(val);
+                        setFormData({
+                            ...formData,
+                            flatNumber: val,
+                            floor: val ? (predicted || formData.floor) : formData.floor
+                        });
+                    }}
                     required
                 />
                 <Input
@@ -485,7 +494,7 @@ const FlatModal: React.FC<{
                     value={formData.floor}
                     onChange={(e) => setFormData({ ...formData, floor: parseInt(e.target.value) || 0 })}
                     required
-                    helperText={selectedBuilding ? `Max Floors for ${selectedBuilding.name}: ${selectedBuilding.totalFloors}` : ''}
+                    helperText={selectedBuilding ? `Predicted Floor: ${predictFloor(formData.flatNumber)} | Max Floors: ${selectedBuilding.totalFloors}` : `Predicted: ${predictFloor(formData.flatNumber)}`}
                 />
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">BHK Type</label>

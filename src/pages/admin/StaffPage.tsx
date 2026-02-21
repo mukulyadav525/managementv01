@@ -173,9 +173,15 @@ export const StaffPage: React.FC = () => {
                                                 {staff.staffType === 'domestic_staff' ? (
                                                     <div className="flex items-center gap-1.5 text-sm text-gray-700">
                                                         <Home size={14} className="text-gray-400" />
-                                                        {staff.flatIds?.[0] ? (
-                                                            <span>Flat {flats.find(f => f.id === staff.flatIds[0])?.flatNumber || staff.flatIds[0]}</span>
-                                                        ) : (
+                                                        {staff.flatIds?.[0] ? (() => {
+                                                            const flat = flats.find(f => f.id === staff.flatIds![0]);
+                                                            return (
+                                                                <span>
+                                                                    Flat {flat?.flatNumber || staff.flatIds[0]}
+                                                                    {flat?.floor && <span className="text-xs text-gray-500 ml-1">(Floor {flat.floor})</span>}
+                                                                </span>
+                                                            );
+                                                        })() : (
                                                             <span className="text-red-400 italic">Not Mapped</span>
                                                         )}
                                                     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SocietyService } from '@/services/supabase.service';
 import { Flat, Building } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
+import { predictFloor } from '@/utils/flat.utils';
 
 interface ResidenceSelectorProps {
     onSelect: (flatId: string, flat?: Flat, floor?: number) => void;
@@ -85,8 +86,9 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
         setSelectedFlatId(val);
         const flat = allFlats.find(f => f.id === val);
         if (flat) {
-            setSelectedFloor(flat.floor);
-            onSelect(val, flat, flat.floor);
+            const floor = flat.floor || predictFloor(flat.flatNumber);
+            setSelectedFloor(floor);
+            onSelect(val, flat, floor);
         } else {
             setSelectedFloor('');
             onSelect(val, undefined, undefined);

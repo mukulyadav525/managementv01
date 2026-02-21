@@ -20,8 +20,7 @@ import {
   Phone,
   Heart,
   Vote,
-  FolderOpen,
-  QrCode
+  FolderOpen
 } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/authStore';
@@ -46,6 +45,7 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'Flats', path: '/flats', icon: Building2, roles: ['admin', 'owner'] },
     { name: 'Residents', path: '/residents', icon: Users, roles: ['admin'] },
     { name: 'Staff', path: '/admin/staff', icon: UserCircle, roles: ['admin'] },
+    { name: 'Management', path: '/admin/management', icon: Settings, roles: ['admin'] },
     { name: 'Residents', path: '/security/residents', icon: Users, roles: ['security'] },
     { name: 'Salaries', path: '/admin/salary', icon: Wallet, roles: ['admin'] },
     { name: 'Visitors', path: '/visitors', icon: UserCircle, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
@@ -61,7 +61,6 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'Amenities', path: '/amenities', icon: Heart, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Polls', path: '/polls', icon: Vote, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Documents', path: '/documents', icon: FolderOpen, roles: ['admin', 'owner', 'tenant', 'staff'] },
-    { name: 'Gate Pass', path: '/gatepass', icon: QrCode, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
   ];
 };

@@ -8,6 +8,7 @@ import { User, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import { exportToCSV } from '@/utils/export';
 import toast from 'react-hot-toast';
+import { predictFloor } from '@/utils/flat.utils';
 
 export const ResidentsPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -706,11 +707,12 @@ const ResidentModal: React.FC<{
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     const existing = flats.find(f => f.flat_number === val || f.flatNumber === val);
+                                    const predicted = predictFloor(val);
                                     setFormData({
                                         ...formData,
                                         flatNumber: val,
                                         buildingId: existing ? existing.building_id || formData.buildingId : formData.buildingId,
-                                        floor: existing ? (existing.floor || existing.floor_number)?.toString() : formData.floor
+                                        floor: existing ? (existing.floor || existing.floor_number)?.toString() : (val ? predicted.toString() : formData.floor)
                                     });
                                 }}
                                 required
@@ -733,9 +735,10 @@ const ResidentModal: React.FC<{
                                 onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                                 required
                             />
-                            {selectedBuilding && (
-                                <p className="text-xs text-gray-500">Max floors: {selectedBuilding.totalFloors}</p>
-                            )}
+                            <p className="text-xs text-gray-500">
+                                {selectedBuilding ? `Max floors: ${selectedBuilding.totalFloors} | ` : ''}
+                                Predicted: {predictFloor(formData.flatNumber)}
+                            </p>
                         </div>
                     )}
                 </div>
