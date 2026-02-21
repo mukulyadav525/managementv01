@@ -142,6 +142,7 @@ export interface Payment {
   receiptUrl?: string;
   month?: string;
   description?: string;
+  societyId: string;
   createdAt: string;
 }
 

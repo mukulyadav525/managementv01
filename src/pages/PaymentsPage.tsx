@@ -11,6 +11,8 @@ import { supabase } from '@/config/supabase';
 import { toSnake, toCamel } from '@/services/supabase.service';
 import { exportToCSV } from '@/utils/export';
 import { Input } from '@/components/common';
+import { ReceiptModal } from '@/components/payments/ReceiptModal';
+
 
 export const PaymentsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -23,7 +25,10 @@ export const PaymentsPage: React.FC = () => {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptPayment, setReceiptPayment] = useState<Payment | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'overdue'>('all');
+
 
   useEffect(() => {
     if (user?.societyId) {
@@ -314,11 +319,13 @@ export const PaymentsPage: React.FC = () => {
                               size="sm"
                               variant="secondary"
                               onClick={() => {
-                                if (payment.receiptUrl) window.open(payment.receiptUrl, '_blank');
+                                setReceiptPayment(payment);
+                                setShowReceiptModal(true);
                               }}
                             >
                               Receipt
                             </Button>
+
                           )}
                           {user?.role === 'admin' && (
                             <>
@@ -395,8 +402,22 @@ export const PaymentsPage: React.FC = () => {
             onClose={() => setShowNotificationModal(false)}
           />
         )}
+
+        {showReceiptModal && receiptPayment && (
+          <ReceiptModal
+            isOpen={showReceiptModal}
+            payment={receiptPayment}
+            onClose={() => {
+              setShowReceiptModal(false);
+              setReceiptPayment(null);
+            }}
+            flat={flats.find(f => f.id === receiptPayment.flatId)}
+            building={buildings.find(b => b.id === flats.find(f => f.id === receiptPayment.flatId)?.buildingId)}
+          />
+        )}
       </div>
     </Layout>
+
   );
 };
 
