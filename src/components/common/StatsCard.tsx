@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface StatsCardProps {
   title: string;
@@ -10,6 +11,7 @@ interface StatsCardProps {
     isPositive: boolean;
   };
   color?: 'blue' | 'green' | 'red' | 'yellow' | 'purple';
+  to?: string;
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({
@@ -17,7 +19,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   value,
   icon: Icon,
   trend,
-  color = 'blue'
+  color = 'blue',
+  to
 }) => {
   const colors = {
     blue: 'bg-blue-100 text-blue-600',
@@ -27,8 +30,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
     purple: 'bg-purple-100 text-purple-600'
   };
 
-  return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+  const CardContent = (
+    <div className={`bg-white rounded-lg shadow-md p-6 border border-gray-200 h-full transition-all duration-200 ${to ? 'hover:shadow-lg hover:border-primary-300 cursor-pointer' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600">{title}</p>
@@ -45,4 +48,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       </div>
     </div>
   );
+
+  if (to) {
+    return <Link to={to} className="block h-full">{CardContent}</Link>;
+  }
+
+  return CardContent;
 };
+

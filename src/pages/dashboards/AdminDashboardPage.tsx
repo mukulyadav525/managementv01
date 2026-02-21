@@ -3,12 +3,14 @@ import {
     Building2,
     Users,
     DollarSign,
-    AlertCircle,
-    TrendingUp,
-    Home,
     UserCheck,
-    Shield
+    Shield,
+    Camera,
+    Car,
+    PawPrint,
+    Wrench
 } from 'lucide-react';
+
 import { Layout } from '@/components/layout/Layout';
 import { StatsCard, Card } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
@@ -17,8 +19,13 @@ import {
     ComplaintService,
     VisitorService,
     SocietyService,
-    UserService
+    UserService,
+    CCTVService,
+    PetService,
+    ServiceRequestService
 } from '@/services/supabase.service';
+import { supabase } from '@/config/supabase';
+
 
 export const AdminDashboardPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -33,8 +40,13 @@ export const AdminDashboardPage: React.FC = () => {
         totalRevenue: 0,
         totalTenants: 0,
         totalSecurity: 0,
-        totalStaff: 0
+        totalStaff: 0,
+        totalCctv: 0,
+        totalVehicles: 0,
+        totalPets: 0,
+        totalServices: 0
     });
+
     const [payments, setPayments] = useState<any[]>([]);
     const [complaints, setComplaints] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,165 +103,211 @@ export const AdminDashboardPage: React.FC = () => {
             const totalSecurity = allUsers.filter((u: any) => u.role === 'security').length;
             const totalStaff = allUsers.filter((u: any) => u.role === 'staff').length;
 
-            setStats({
-                totalFlats,
-                occupiedFlats,
-                vacantFlats,
-                totalResidents: occupiedFlats,
-                pendingPayments,
-                openComplaints: openComplaintsCount,
-                todayVisitors,
-                totalRevenue,
-                totalTenants,
+            totalTenants,
                 totalSecurity,
-                totalStaff
-            });
-        } catch (error) {
-            console.error('Error loading admin dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+                totalStaff,
+                totalCctv: (await CCTVService.getCameras(user.societyId)).length,
+                    totalVehicles: (await supabase.from('vehicles').select('id', { count: 'exact', head: true }).eq('society_id', user.societyId)).count || 0,
+                        totalPets: (await PetService.getPets(user.societyId)).length,
+                            totalServices: (await ServiceRequestService.getRequests(user.societyId)).length
+        });
 
-    if (loading) {
-        return (
-            <Layout>
-                <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-                        <p className="mt-4 text-gray-600">Loading dashboard...</p>
-                    </div>
-                </div>
-            </Layout>
-        );
+    } catch (error) {
+        console.error('Error loading admin dashboard:', error);
+    } finally {
+        setLoading(false);
     }
+};
 
+if (loading) {
     return (
         <Layout>
-            <div className="space-y-6">
-                {/* Page Header */}
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                    <p className="text-gray-600 mt-1">Society-wide management and analytics</p>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatsCard
-                        title="Total Flats"
-                        value={stats.totalFlats}
-                        icon={Home}
-                        color="blue"
-                    />
-                    <StatsCard
-                        title="Occupied"
-                        value={stats.occupiedFlats}
-                        icon={Building2}
-                        color="green"
-                    />
-                    <StatsCard
-                        title="Vacant"
-                        value={stats.vacantFlats}
-                        icon={Building2}
-                        color="blue"
-                    />
-                    <StatsCard
-                        title="Total Residents"
-                        value={stats.totalResidents}
-                        icon={Users}
-                        color="purple"
-                    />
-                    <StatsCard
-                        title="Pending Payments"
-                        value={stats.pendingPayments}
-                        icon={DollarSign}
-                        color="yellow"
-                    />
-                    <StatsCard
-                        title="Open Complaints"
-                        value={stats.openComplaints}
-                        icon={AlertCircle}
-                        color="red"
-                    />
-                    <StatsCard
-                        title="Today's Visitors"
-                        value={stats.todayVisitors}
-                        icon={UserCheck}
-                        color="purple"
-                    />
-                    <StatsCard
-                        title="Total Revenue"
-                        value={`₹${stats.totalRevenue.toLocaleString()}`}
-                        icon={TrendingUp}
-                        color="green"
-                    />
-                    <StatsCard
-                        title="Total Tenants"
-                        value={stats.totalTenants}
-                        icon={Users}
-                        color="purple"
-                    />
-                    <StatsCard
-                        title="Security Guards"
-                        value={stats.totalSecurity}
-                        icon={Shield}
-                        color="blue"
-                    />
-                    <StatsCard
-                        title="Society Staff"
-                        value={stats.totalStaff}
-                        icon={Users}
-                        color="purple"
-                    />
-                </div>
-
-                {/* Recent Activity */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card title="Recent Payments" subtitle="Latest transactions across society">
-                        <div className="space-y-3">
-                            {payments.length === 0 && (
-                                <p className="text-gray-500 text-center py-4">No payments recorded</p>
-                            )}
-                            {payments.slice(0, 5).map((payment: any) => (
-                                <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div>
-                                        <p className="font-medium text-gray-900">Flat {payment.flatId}</p>
-                                        <p className="text-sm text-gray-500">{payment.type}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className={`font-semibold ${payment.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                            ₹{payment.amount.toLocaleString()}
-                                        </p>
-                                        <p className="text-xs text-gray-500 capitalize">{payment.status}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-
-                    <Card title="Critical Complaints" subtitle="High priority issues">
-                        <div className="space-y-3">
-                            {complaints.filter((c: any) => c.priority === 'high' && (c.status === 'open' || c.status === 'in-progress')).length === 0 && (
-                                <p className="text-gray-500 text-center py-4">No critical complaints</p>
-                            )}
-                            {complaints
-                                .filter((c: any) => c.priority === 'high' && (c.status === 'open' || c.status === 'in-progress'))
-                                .slice(0, 5)
-                                .map((complaint: any) => (
-                                    <div key={complaint.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                                        <div className="flex-1">
-                                            <p className="font-medium text-gray-900">{complaint.title}</p>
-                                            <p className="text-sm text-gray-500">Flat {complaint.flatId}</p>
-                                        </div>
-                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                            {complaint.priority}
-                                        </span>
-                                    </div>
-                                ))}
-                        </div>
-                    </Card>
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading dashboard...</p>
                 </div>
             </div>
         </Layout>
     );
+}
+
+return (
+    <Layout>
+        <div className="space-y-6">
+            {/* Page Header */}
+            <div>
+                <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                <p className="text-gray-600 mt-1">Society-wide management and analytics</p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatsCard
+                    title="Total Flats"
+                    value={stats.totalFlats}
+                    icon={Home}
+                    color="blue"
+                    to="/flats"
+                />
+
+                <StatsCard
+                    title="Occupied"
+                    value={stats.occupiedFlats}
+                    icon={Building2}
+                    color="green"
+                    to="/flats"
+                />
+
+                <StatsCard
+                    title="Vacant"
+                    value={stats.vacantFlats}
+                    icon={Building2}
+                    color="blue"
+                    to="/flats"
+                />
+
+                <StatsCard
+                    title="Total Residents"
+                    value={stats.totalResidents}
+                    icon={Users}
+                    color="purple"
+                    to="/residents"
+                />
+
+                <StatsCard
+                    title="Pending Payments"
+                    value={stats.pendingPayments}
+                    icon={DollarSign}
+                    color="yellow"
+                    to="/payments"
+                />
+
+                <StatsCard
+                    title="Open Complaints"
+                    value={stats.openComplaints}
+                    icon={AlertCircle}
+                    color="red"
+                    to="/complaints"
+                />
+
+                <StatsCard
+                    title="Today's Visitors"
+                    value={stats.todayVisitors}
+                    icon={UserCheck}
+                    color="purple"
+                    to="/visitors"
+                />
+
+                <StatsCard
+                    title="Total Revenue"
+                    value={`₹${stats.totalRevenue.toLocaleString()}`}
+                    icon={TrendingUp}
+                    color="green"
+                    to="/payments"
+                />
+
+                <StatsCard
+                    title="Total Tenants"
+                    value={stats.totalTenants}
+                    icon={Users}
+                    color="purple"
+                    to="/residents"
+                />
+
+                <StatsCard
+                    title="Security Guards"
+                    value={stats.totalSecurity}
+                    icon={Shield}
+                    color="blue"
+                    to="/admin/staff"
+                />
+
+                <StatsCard
+                    title="Society Staff"
+                    value={stats.totalStaff}
+                    icon={Users}
+                    color="purple"
+                    to="/admin/staff"
+                />
+                <StatsCard
+                    title="CCTV Cameras"
+                    value={stats.totalCctv}
+                    icon={Camera}
+                    color="blue"
+                    to="/security/cctv"
+                />
+                <StatsCard
+                    title="Registered Vehicles"
+                    value={stats.totalVehicles}
+                    icon={Car}
+                    color="indigo"
+                    to="/vehicles"
+                />
+                <StatsCard
+                    title="Society Pets"
+                    value={stats.totalPets}
+                    icon={PawPrint}
+                    color="purple"
+                    to="/pets"
+                />
+                <StatsCard
+                    title="Service Requests"
+                    value={stats.totalServices}
+                    icon={Wrench}
+                    color="yellow"
+                    to="/services"
+                />
+
+            </div>
+
+            {/* Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card title="Recent Payments" subtitle="Latest transactions across society">
+                    <div className="space-y-3">
+                        {payments.length === 0 && (
+                            <p className="text-gray-500 text-center py-4">No payments recorded</p>
+                        )}
+                        {payments.slice(0, 5).map((payment: any) => (
+                            <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p className="font-medium text-gray-900">Flat {payment.flatId}</p>
+                                    <p className="text-sm text-gray-500">{payment.type}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className={`font-semibold ${payment.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+                                        ₹{payment.amount.toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-gray-500 capitalize">{payment.status}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                <Card title="Critical Complaints" subtitle="High priority issues">
+                    <div className="space-y-3">
+                        {complaints.filter((c: any) => c.priority === 'high' && (c.status === 'open' || c.status === 'in-progress')).length === 0 && (
+                            <p className="text-gray-500 text-center py-4">No critical complaints</p>
+                        )}
+                        {complaints
+                            .filter((c: any) => c.priority === 'high' && (c.status === 'open' || c.status === 'in-progress'))
+                            .slice(0, 5)
+                            .map((complaint: any) => (
+                                <div key={complaint.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{complaint.title}</p>
+                                        <p className="text-sm text-gray-500">Flat {complaint.flatId}</p>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                        {complaint.priority}
+                                    </span>
+                                </div>
+                            ))}
+                    </div>
+                </Card>
+            </div>
+        </div>
+    </Layout>
+);
 };

@@ -14,8 +14,11 @@ import {
   Camera,
   PawPrint,
   Wallet,
-  Wrench
+  Wrench,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+
 import { useAuthStore } from '@/stores/authStore';
 import { getDashboardPath } from '@/utils/roleUtils';
 import { SocietyService } from '@/services/supabase.service';
@@ -58,6 +61,17 @@ export const Sidebar: React.FC = () => {
   const { user, signOut } = useAuthStore();
   const [societyName, setSocietyName] = useState('Society Manager');
   const [flatNumbers, setFlatNumbers] = useState<string>('');
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved === 'true';
+  });
+
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem('sidebar-collapsed', String(newState));
+  };
+
 
   useEffect(() => {
     const fetchSidebarData = async () => {
@@ -89,25 +103,36 @@ export const Sidebar: React.FC = () => {
   );
 
   return (
-    <div className="w-64 bg-slate-900 text-slate-100 min-h-screen flex flex-col shadow-xl">
+    <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-slate-100 min-h-screen flex flex-col shadow-xl transition-all duration-300 relative`}>
+      {/* Toggle Button */}
+      <button
+        onClick={toggleSidebar}
+        className="absolute -right-3 top-10 bg-primary-600 text-white p-1 rounded-full shadow-lg hover:bg-primary-500 z-50"
+      >
+        {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      </button>
+
       {/* Logo */}
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold text-white flex items-center gap-2">
-          <Building2 className="text-primary-400" size={24} />
-          <span className="truncate">{societyName}</span>
+      <div className={`p-6 border-b border-slate-800 ${isCollapsed ? 'flex justify-center' : ''}`}>
+        <h1 className="text-xl font-bold text-white flex items-center gap-2 overflow-hidden">
+          <Building2 className="text-primary-400 shrink-0" size={24} />
+          {!isCollapsed && <span className="truncate">{societyName}</span>}
         </h1>
-        <div className="mt-4 flex items-center gap-3 px-1">
-          <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-xs font-bold">
-            {user?.name?.charAt(0) || 'U'}
+        {!isCollapsed && (
+          <div className="mt-4 flex items-center gap-3 px-1">
+            <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-xs font-bold shrink-0">
+              {user?.name?.charAt(0) || 'U'}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium text-white truncate w-32">{user?.name}</p>
+              <p className="text-xs text-slate-400 capitalize truncate">
+                {user?.role} {flatNumbers && `• ${flatNumbers}`}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-white truncate w-32">{user?.name}</p>
-            <p className="text-xs text-slate-400 capitalize">
-              {user?.role} {flatNumbers && `• ${flatNumbers}`}
-            </p>
-          </div>
-        </div>
+        )}
       </div>
+
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
@@ -119,17 +144,20 @@ export const Sidebar: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
+              title={isCollapsed ? item.name : ''}
               className={`
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
                 ${isActive
                   ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/50'
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }
+                ${isCollapsed ? 'justify-center px-0' : ''}
               `}
             >
-              <Icon size={20} className={isActive ? 'text-white' : 'text-slate-400'} />
-              <span className="font-medium">{item.name}</span>
+              <Icon size={20} className={`${isActive ? 'text-white' : 'text-slate-400'} shrink-0`} />
+              {!isCollapsed && <span className="font-medium truncate">{item.name}</span>}
             </Link>
+
           );
         })}
       </nav>
@@ -138,38 +166,42 @@ export const Sidebar: React.FC = () => {
       <div className="p-4 border-t border-slate-800">
         <button
           onClick={() => signOut()}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-900/20 hover:text-red-400 transition-all duration-200"
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-slate-400 hover:bg-red-900/20 hover:text-red-400 transition-all duration-200 ${isCollapsed ? 'justify-center px-0' : ''}`}
+          title={isCollapsed ? 'Logout' : ''}
         >
-          <LogOut size={20} />
-          <span className="font-medium">Logout</span>
+          <LogOut size={20} className="shrink-0" />
+          {!isCollapsed && <span className="font-medium">Logout</span>}
         </button>
+
       </div>
       {/* Footer */}
-      <div className="p-6 border-t border-slate-800 text-center">
-        <p className="text-xs text-slate-500">
-          Made with ❤️ by{' '}
-          <a
-            href="https://www.linkedin.com/in/mukulyadav525"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-400 font-medium hover:text-primary-300 hover:underline"
-          >
-            Mukul
-          </a>{' '}
-          and{' '}
-          <a
-            href="https://www.linkedin.com/in/priya-kyal-44bb69313"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-400 font-medium hover:text-primary-300 hover:underline"
-          >
-            Priya
-          </a>
-        </p>
-        <p className="text-[10px] text-slate-600 mt-1">
-          © {new Date().getFullYear()} All Rights Reserved
-        </p>
-      </div>
+      {!isCollapsed && (
+        <div className="p-6 border-t border-slate-800 text-center">
+          <p className="text-xs text-slate-400">
+            <a
+              href="https://www.linkedin.com/in/mukulyadav525"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-400 font-medium hover:text-primary-300 hover:underline"
+            >
+              Mukul
+            </a>{' '}
+            and{' '}
+            <a
+              href="https://www.linkedin.com/in/priya-kyal-44bb69313"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-400 font-medium hover:text-primary-300 hover:underline"
+            >
+              Priya
+            </a>
+          </p>
+          <p className="text-[10px] text-slate-600 mt-1 uppercase tracking-wider">
+            All Rights Reserved © {new Date().getFullYear()}
+          </p>
+        </div>
+      )}
+
     </div>
   );
 };
