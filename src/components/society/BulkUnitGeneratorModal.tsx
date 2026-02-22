@@ -58,9 +58,12 @@ export const BulkUnitGeneratorModal: React.FC<BulkUnitGeneratorModalProps> = ({ 
             setLoading(true);
             toast.loading(`Generating ${towers.length} towers and ${totalUnitsGenerated} units...`, { id: 'bulk-gen' });
 
-            await SocietyService.bulkGenerateTowers(societyId, towers);
+            const result = await SocietyService.bulkGenerateTowers(societyId, towers);
 
-            toast.success('Successfully generated buildings and units!', { id: 'bulk-gen' });
+            const msg = result.skipped > 0
+                ? `Created ${result.created} new tower(s). ${result.skipped} tower(s) were skipped (already exist).`
+                : `Successfully generated ${result.created} building(s) and units!`;
+            toast.success(msg, { id: 'bulk-gen' });
             onSuccess();
             onClose();
         } catch (error: any) {

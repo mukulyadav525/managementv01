@@ -202,23 +202,36 @@ export class SocietyService extends SupabaseService {
     }
 
     static async bulkGenerateTowers(societyId: string, towers: Array<{ name: string, floors: number, unitsPerFloor: number }>) {
-        const buildingsToInsert = towers.map(t => ({
-            id: crypto.randomUUID(),
-            society_id: societyId,
-            name: t.name,
-            total_floors: t.floors,
-            total_flats: t.floors * t.unitsPerFloor
-        }));
+        // 1. Check which buildings already exist so we can skip their unit generation
+        const { data: existingBuildings } = await supabase
+            .from('buildings')
+            .select('id, name')
+            .eq('society_id', societyId);
 
-        // Insert buildings
+        const existingNames = new Set((existingBuildings || []).map((b: any) => b.name.toLowerCase()));
+
+        const buildingsToInsert = towers
+            .filter(t => !existingNames.has(t.name.toLowerCase())) // skip existing ones
+            .map(t => ({
+                id: crypto.randomUUID(),
+                society_id: societyId,
+                name: t.name,
+                total_floors: t.floors,
+                total_flats: t.floors * t.unitsPerFloor
+            }));
+
+        if (buildingsToInsert.length === 0) {
+            throw new Error(`All specified towers (${towers.map(t => t.name).join(', ')}) already exist. Rename a tower to create a new one.`);
+        }
+
+        // 2. Insert only new buildings
         const { error: bError } = await supabase.from('buildings').insert(buildingsToInsert);
         if (bError) throw bError;
 
-        const unitsToInsert = [];
-        for (let i = 0; i < towers.length; i++) {
-            const tower = towers[i];
-            const buildingId = buildingsToInsert[i].id;
-
+        // 3. Generate units only for the newly created buildings
+        const unitsToInsert: any[] = [];
+        for (const building of buildingsToInsert) {
+            const tower = towers.find(t => t.name === building.name)!;
             for (let floor = 1; floor <= tower.floors; floor++) {
                 for (let unit = 1; unit <= tower.unitsPerFloor; unit++) {
                     const unitNumberStr = unit < 10 ? `0${unit}` : `${unit}`;
@@ -227,18 +240,18 @@ export class SocietyService extends SupabaseService {
                     unitsToInsert.push({
                         id: crypto.randomUUID(),
                         society_id: societyId,
-                        building_id: buildingId,
+                        building_id: building.id,
                         flat_number: unitNumber,
                         floor: floor,
-                        bhk_type: '2BHK', // Default
-                        area: 1000,       // Default
+                        bhk_type: '2BHK',
+                        area: 1000,
                         occupancy_status: 'vacant'
                     });
                 }
             }
         }
 
-        // Insert units in batches to avoid payload limits if large
+        // 4. Insert units in batches
         const batchSize = 100;
         for (let i = 0; i < unitsToInsert.length; i += batchSize) {
             const batch = unitsToInsert.slice(i, i + batchSize);
@@ -246,7 +259,8 @@ export class SocietyService extends SupabaseService {
             if (uError) throw uError;
         }
 
-        return true;
+        const skipped = towers.length - buildingsToInsert.length;
+        return { created: buildingsToInsert.length, skipped };
     }
 
     static async assignFlatToUser(userId: string, flatId: string) {
