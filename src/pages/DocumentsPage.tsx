@@ -22,12 +22,13 @@ export const DocumentsPage: React.FC = () => {
         if (user?.societyId) {
             loadDocs();
         }
-    }, [user, activeTab]);
+    }, [user]);
 
     const loadDocs = async () => {
         setLoading(true);
         try {
-            const data = await DocumentService.getDocumentsEx(user!.societyId, activeTab);
+            // Fetch everything the user has access to
+            const data = await DocumentService.getDocumentsEx(user!.societyId);
             setDocuments(data as DocType[]);
         } catch (error) {
             toast.error('Failed to load documents');
@@ -95,7 +96,7 @@ export const DocumentsPage: React.FC = () => {
 
                 {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <StatsCard title="Total Storage" value="4.65 MB" icon={FolderOpen} color="blue" />
+                    <StatsCard title="Total Documents" value={documents.length} icon={FolderOpen} color="blue" />
                     <StatsCard title="Society Docs" value={documents.filter(d => d.category === 'society').length} icon={Globe} color="green" />
                     <StatsCard title="Private Files" value={documents.filter(d => d.category === 'personal').length} icon={Lock} color="purple" />
                 </div>
