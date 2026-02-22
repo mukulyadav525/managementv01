@@ -265,7 +265,8 @@ export const ResidentsPage: React.FC = () => {
             toast.success(editingResident ? 'Resident updated' : 'Resident added');
             setShowModal(false);
             setEditingResident(null);
-            loadInitialData(); // Reload all to stay in sync
+            // Defer data reload so CredentialSuccessModal renders first (before loading spinner re-render)
+            setTimeout(() => loadInitialData(), 50);
         } catch (error: any) {
             toast.error(error.message || 'Failed to save resident');
         } finally {
