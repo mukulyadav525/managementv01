@@ -82,8 +82,21 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                 if (updateError) throw updateError;
                 toast.success('Existing tenant linked to flat!');
             } else {
-                // 1. Create auth user
-                const { data: authData, error: authError } = await supabase.auth.signUp({
+                // 1. Create auth user using a non-persisting client so the owner isn't logged out
+                const { createClient } = await import('@supabase/supabase-js');
+                const tempSupabase = createClient(
+                    import.meta.env.VITE_SUPABASE_URL,
+                    import.meta.env.VITE_SUPABASE_ANON_KEY,
+                    {
+                        auth: {
+                            persistSession: false,
+                            autoRefreshToken: false,
+                            detectSessionInUrl: false
+                        }
+                    }
+                );
+
+                const { data: authData, error: authError } = await tempSupabase.auth.signUp({
                     email: formData.email,
                     password: formData.password,
                     options: {
