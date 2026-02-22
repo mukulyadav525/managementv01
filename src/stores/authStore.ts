@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { User } from '@/types';
 import { supabase } from '@/config/supabase';
 import { toCamel, toSnake } from '@/services/supabase.service';
-import { EmailService } from '@/services/email.service';
+
 
 interface AuthState {
   user: User | null;
@@ -440,11 +440,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         throw new Error(`Profile creation failed: ${dbError.message}`);
       }
 
-      // 3. Send automated email (non-blocking)
-      console.log('authStore: [ADMIN_REG] Dispatching email to:', email);
-      EmailService.sendRegistrationEmail(email, password, userData.name || 'New User')
-        .then(() => console.log('authStore: [ADMIN_REG] Email process initiated'))
-        .catch(err => console.error('authStore: [ADMIN_REG] Email dispatch failed:', err));
+      // 3. Send Supabase password reset email so the user can set their own password
+      // This uses Supabase's built-in email system — no custom domain needed
+      console.log('authStore: [ADMIN_REG] Sending password setup email to:', email);
+      supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+        .then(() => console.log('authStore: [ADMIN_REG] Password setup email sent'))
+        .catch(err => console.error('authStore: [ADMIN_REG] Password email failed:', err));
 
       console.log('authStore: [ADMIN_REG] Process complete for:', uid);
       set({ loading: false });

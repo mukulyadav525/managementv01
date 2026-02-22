@@ -29,7 +29,6 @@ export const ResidentsPage: React.FC = () => {
     const [selectedResident, setSelectedResident] = useState<User | null>(null);
     const [editingResident, setEditingResident] = useState<User | null>(null);
     const [agreements, setAgreements] = useState<{ [key: string]: RentAgreement }>({}); // tenantId -> agreement
-    const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string; password: string } | null>(null);
 
     useEffect(() => {
         if (user?.societyId) {
@@ -244,7 +243,7 @@ export const ResidentsPage: React.FC = () => {
 
                 // Crucial: Use the returned UID for subsequent operations (like flat updates)
                 residentData.uid = createdUid;
-                setGeneratedCredentials({ email: formData.email, password });
+                // Credentials are sent via email automatically
             }
 
             if (['owner', 'tenant'].includes(formData.role)) {
@@ -514,78 +513,13 @@ export const ResidentsPage: React.FC = () => {
                     existingAgreement={showAgreementModal.agreement}
                 />
 
-                {generatedCredentials && (
-                    <CredentialSuccessModal
-                        isOpen={!!generatedCredentials}
-                        onClose={() => setGeneratedCredentials(null)}
-                        credentials={generatedCredentials}
-                    />
-                )}
+
             </div>
         </Layout>
     );
 };
 
-const CredentialSuccessModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    credentials: { email: string; password: string };
-}> = ({ isOpen, onClose, credentials }) => {
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="User Registered Successfully">
-            <div className="space-y-4">
-                <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-                    <p className="text-sm text-green-800">
-                        An authentication account has been created for this user. You can now share these credentials with them.
-                    </p>
-                </div>
 
-                <div className="space-y-3">
-                    <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase">Email Address</label>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-1">
-                            <span className="font-mono text-sm">{credentials.email}</span>
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(credentials.email);
-                                    toast.success('Email copied');
-                                }}
-                                className="text-primary-600 hover:text-primary-700 text-xs font-medium"
-                            >
-                                Copy
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase">Temporary Password</label>
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-1">
-                            <span className="font-mono text-sm">{credentials.password}</span>
-                            <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(credentials.password);
-                                    toast.success('Password copied');
-                                }}
-                                className="text-primary-600 hover:text-primary-700 text-xs font-medium"
-                            >
-                                Copy
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="pt-4 p-3 bg-amber-50 rounded-lg border border-amber-100 flex gap-2">
-                    <Shield size={18} className="text-amber-600 shrink-0" />
-                    <p className="text-xs text-amber-800 italic">
-                        The user can also log in directly via Google using the same email address.
-                    </p>
-                </div>
-
-                <Button onClick={onClose} className="w-full mt-4">Done</Button>
-            </div>
-        </Modal>
-    );
-};
 
 const SendNotificationModal: React.FC<{
     isOpen: boolean;
