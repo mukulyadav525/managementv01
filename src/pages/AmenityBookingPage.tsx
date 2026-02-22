@@ -23,7 +23,7 @@ export const AmenityBookingPage: React.FC = () => {
     const [bookingModalAmenity, setBookingModalAmenity] = useState<Amenity | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState<any>({});
-    const [view, setView] = useState<'mine' | 'all'>(user?.role === 'admin' ? 'all' : 'mine');
+    const [view, setView] = useState<'mine' | 'all'>(['admin', 'security'].includes(user?.role || '') ? 'all' : 'mine');
     const [buildings, setBuildings] = useState<Building[]>([]);
     const [detailedBookings, setDetailedBookings] = useState<any[]>([]);
 
@@ -42,7 +42,7 @@ export const AmenityBookingPage: React.FC = () => {
                 SocietyService.getBuildings(user!.societyId)
             ];
 
-            if (user?.role === 'admin') {
+            if (['admin', 'security'].includes(user?.role || '')) {
                 promises.push(AmenityService.getDetailedBookings(user!.societyId));
             }
 
@@ -210,7 +210,7 @@ export const AmenityBookingPage: React.FC = () => {
                             >
                                 My Bookings
                             </button>
-                            {user?.role === 'admin' && (
+                            {['admin', 'security'].includes(user?.role || '') && (
                                 <button
                                     onClick={() => setView('all')}
                                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${view === 'all' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}

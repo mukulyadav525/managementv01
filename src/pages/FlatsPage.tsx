@@ -358,19 +358,13 @@ export const FlatsPage: React.FC = () => {
                                                     })()}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {(flat.occupancyStatus === 'vacant' || flat.occupancyStatus === 'unassigned') ? (
-                                                        <span className="text-xs text-gray-400 italic">None</span>
+                                                    {owner ? (
+                                                        <div className="text-sm font-medium text-gray-800">{owner.name}</div>
                                                     ) : (
-                                                        <>
-                                                            {owner ? (
-                                                                <div className="text-sm font-medium text-gray-800">{owner.name}</div>
-                                                            ) : (
-                                                                <span className="text-xs text-gray-400">—</span>
-                                                            )}
-                                                            {tenant && (
-                                                                <div className="text-xs text-blue-500 font-medium">+ {tenant.name} (tenant)</div>
-                                                            )}
-                                                        </>
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
+                                                    {tenant && (
+                                                        <div className="text-xs text-blue-500">+ {tenant.name} (tenant)</div>
                                                     )}
                                                 </td>
                                                 {user?.role === 'admin' && (
