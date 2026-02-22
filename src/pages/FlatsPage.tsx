@@ -23,6 +23,7 @@ export const FlatsPage: React.FC = () => {
     const [assignOccupantsUnit, setAssignOccupantsUnit] = useState<Flat | null>(null);
     const [editingFlat, setEditingFlat] = useState<Flat | null>(null);
     const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
+    const [selectedFlats, setSelectedFlats] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (user?.societyId) {
@@ -122,9 +123,41 @@ export const FlatsPage: React.FC = () => {
             const { error } = await supabase.from('flats').delete().eq('id', id);
             if (error) throw error;
             toast.success('Flat deleted');
+            setSelectedFlats(new Set());
             loadFlats();
         } catch (error) {
             toast.error('Failed to delete flat');
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedFlats.size === 0) return;
+        if (!window.confirm(`Delete ${selectedFlats.size} selected unit(s)? This cannot be undone.`)) return;
+        try {
+            const ids = Array.from(selectedFlats);
+            const { error } = await supabase.from('flats').delete().in('id', ids);
+            if (error) throw error;
+            toast.success(`${ids.length} unit(s) deleted`);
+            setSelectedFlats(new Set());
+            loadFlats();
+        } catch (error) {
+            toast.error('Failed to delete selected units');
+        }
+    };
+
+    const toggleSelectFlat = (id: string) => {
+        setSelectedFlats(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedFlats.size === flats.length) {
+            setSelectedFlats(new Set());
+        } else {
+            setSelectedFlats(new Set(flats.map(f => f.id)));
         }
     };
 
@@ -133,13 +166,20 @@ export const FlatsPage: React.FC = () => {
         try {
             if (editingBuilding) {
                 await SocietyService.updateBuilding(editingBuilding.id, formData);
-                toast.success('Building updated');
+                // Propagate BHK update to all existing flats in this building
+                if (formData.bhkType) {
+                    await supabase
+                        .from('flats')
+                        .update({ bhk_type: formData.bhkType })
+                        .eq('building_id', editingBuilding.id);
+                }
+                toast.success('Building updated and unit types refreshed');
             } else {
                 await SocietyService.createBuilding(user.societyId, formData);
                 toast.success('Building added');
             }
             setShowBuildingModal(false);
-            loadInitialData();
+            await loadInitialData();
         } catch (error: any) {
             toast.error(error.message || 'Failed to save building');
         }
@@ -171,6 +211,12 @@ export const FlatsPage: React.FC = () => {
                     <div className="flex gap-2">
                         {user?.role === 'admin' && (
                             <>
+                                {selectedFlats.size > 0 && (
+                                    <Button variant="danger" onClick={handleBulkDelete}>
+                                        <Trash2 size={18} className="mr-2" />
+                                        Delete {selectedFlats.size} Selected
+                                    </Button>
+                                )}
                                 <Button variant="secondary" onClick={() => setShowBuildingListModal(true)}>
                                     <BuildingIcon size={20} className="mr-2" />
                                     Manage Buildings
@@ -241,6 +287,15 @@ export const FlatsPage: React.FC = () => {
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50 border-b">
                                     <tr>
+                                        {user?.role === 'admin' && (
+                                            <th className="px-4 py-3">
+                                                <input type="checkbox"
+                                                    checked={flats.length > 0 && selectedFlats.size === flats.length}
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 cursor-pointer"
+                                                />
+                                            </th>
+                                        )}
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Flat No</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Building</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
@@ -255,7 +310,17 @@ export const FlatsPage: React.FC = () => {
                                     {flats.length > 0 ? flats.map((flat) => {
                                         const building = buildings.find(b => b.id === flat.buildingId);
                                         return (
-                                            <tr key={flat.id} className="hover:bg-gray-50">
+                                            <tr key={flat.id} className={`hover:bg-gray-50 ${selectedFlats.has(flat.id) ? 'bg-blue-50' : ''}`}>
+                                                {user?.role === 'admin' && (
+                                                    <td className="px-4 py-4">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedFlats.has(flat.id)}
+                                                            onChange={() => toggleSelectFlat(flat.id)}
+                                                            className="w-4 h-4 cursor-pointer"
+                                                        />
+                                                    </td>
+                                                )}
                                                 <td className="px-6 py-4 font-medium">{flat.flatNumber}</td>
                                                 <td className="px-6 py-4">{building?.name || '--'}</td>
                                                 <td className="px-6 py-4">{flat.bhkType}</td>
@@ -409,7 +474,8 @@ const BuildingModal: React.FC<{
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
         totalFloors: initialData?.totalFloors || 1,
-        totalFlats: initialData?.totalFlats || 0
+        totalFlats: initialData?.totalFlats || 0,
+        bhkType: '2BHK' // Added BHK Type for bulk updates
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -445,6 +511,19 @@ const BuildingModal: React.FC<{
                         required
                     />
                 </div>
+                {initialData && (
+                    <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
+                        <p className="font-semibold mb-1">Update Units Feature</p>
+                        <p>Change the BHK Type below to apply it to <strong>all</strong> existing flats in this building instantly.</p>
+                    </div>
+                )}
+                <Input
+                    label="Default BHK Type"
+                    value={formData.bhkType}
+                    onChange={(e) => setFormData({ ...formData, bhkType: e.target.value })}
+                    placeholder="e.g. 2BHK, 3BHK"
+                    required
+                />
                 <div className="flex gap-3 pt-4">
                     <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
                     <Button type="submit" className="flex-1">Save Building</Button>
