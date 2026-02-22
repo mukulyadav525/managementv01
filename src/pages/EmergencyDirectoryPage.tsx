@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Phone, Shield, LifeBuoy, Heart, Wrench, Search, MapPin, Plus, Trash2, X, Edit2 } from 'lucide-react';
+import { Phone, Shield, LifeBuoy, Heart, Wrench, Search, Plus, Trash2, X, Edit2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button } from '@/components/common';
-import { EmergencyService, SocietyService } from '@/services/supabase.service';
+import { EmergencyService } from '@/services/supabase.service';
 import { useAuthStore } from '@/stores/authStore';
 import { EmergencyContact } from '@/types';
 import toast from 'react-hot-toast';
@@ -15,26 +15,16 @@ export const EmergencyDirectoryPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [editingContact, setEditingContact] = useState<EmergencyContact | null>(null);
-    const [society, setSociety] = useState<any>(null);
     const [formData, setFormData] = useState<any>({
         category: 'society'
     });
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
     React.useEffect(() => {
         if (user?.societyId) {
             loadContacts();
-            loadSociety();
         }
     }, [user]);
-
-    const loadSociety = async () => {
-        try {
-            const data = await SocietyService.getSociety(user!.societyId);
-            setSociety(data);
-        } catch (error) {
-            console.error('Failed to load society info');
-        }
-    };
 
     const loadContacts = async () => {
         setLoading(true);
@@ -48,11 +38,17 @@ export const EmergencyDirectoryPage: React.FC = () => {
         }
     };
 
-    const filteredContacts = contacts.filter(contact =>
-        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        contact.description?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredContacts = contacts.filter(contact => {
+        const matchesSearch =
+            contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            contact.phone.includes(searchQuery) ||
+            contact.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            contact.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesCategory = selectedCategory === 'all' || contact.category === selectedCategory;
+
+        return matchesSearch && matchesCategory;
+    });
 
     const handleDelete = async (id: string) => {
         if (!window.confirm('Are you sure you want to delete this contact?')) return;
@@ -119,12 +115,6 @@ export const EmergencyDirectoryPage: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-900">Emergency Directory</h1>
                         <p className="text-gray-600 mt-1">Quick access to essential services and society helpdesk</p>
                     </div>
-                    {user?.role === 'admin' && (
-                        <Button onClick={() => { setEditingContact(null); setFormData({ category: 'society' }); setShowModal(true); }} className="flex items-center gap-2">
-                            <Plus size={20} />
-                            Add Contact
-                        </Button>
-                    )}
                 </div>
 
                 {loading ? (
@@ -133,14 +123,33 @@ export const EmergencyDirectoryPage: React.FC = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Quick Search */}
-                        <div className="max-w-xl">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        {/* Filters & Search */}
+                        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between mb-8">
+                            <div className="flex flex-wrap gap-2">
+                                {['all', 'emergency', 'medical', 'society', 'essential'].map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedCategory(cat)}
+                                        className={`
+                                            px-4 py-2 rounded-xl text-sm font-bold transition-all border-2
+                                            ${selectedCategory === cat
+                                                ? 'bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-100 scale-105'
+                                                : 'bg-white border-gray-100 text-gray-500 hover:border-primary-200 hover:text-primary-600'
+                                            }
+                                            capitalize
+                                        `}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="w-full lg:max-w-xs relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Search by name, category, or service..."
-                                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white shadow-sm"
+                                    placeholder="Search directory..."
+                                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-medium"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -228,7 +237,7 @@ export const EmergencyDirectoryPage: React.FC = () => {
                                                         >
                                                             <Phone size={14} />
                                                         </a>
-                                                        {user?.role === 'admin' && (
+                                                        {(user?.role === 'admin' || user?.role === 'security') && (
                                                             <div className="flex gap-1">
                                                                 <button
                                                                     onClick={() => {
@@ -277,25 +286,24 @@ export const EmergencyDirectoryPage: React.FC = () => {
                             })}
                         </div>
 
-                        {/* Help Notice */}
+                        {/* Help Notice / Add Entry */}
                         <div className="bg-primary-50 rounded-2xl p-6 border border-primary-100 flex flex-col md:flex-row items-center gap-6">
                             <div className="bg-white p-4 rounded-xl shadow-sm">
-                                <MapPin className="text-primary-600" size={32} />
+                                <Plus className="text-primary-600" size={32} />
                             </div>
                             <div className="flex-1 text-center md:text-left">
-                                <h4 className="font-bold text-gray-900 text-lg">Suggest a Contact?</h4>
-                                <p className="text-gray-600">If you want to add a new emergency number or local service to this directory, please inform the society admin.</p>
+                                <h4 className="font-bold text-gray-900 text-lg">Manage Directory Contacts</h4>
+                                <p className="text-gray-600">Admins and Security guards can add or update emergency numbers and local services to keep the directory accurate.</p>
                             </div>
-                            <Button
-                                variant="secondary"
-                                className="whitespace-nowrap"
-                                onClick={() => {
-                                    const adminEmail = society?.contactEmail || 'admin@society.com';
-                                    window.location.href = `mailto:${adminEmail}?subject=Support Request from ${user?.name}`;
-                                }}
-                            >
-                                Contact Admin
-                            </Button>
+                            {(user?.role === 'admin' || user?.role === 'security') && (
+                                <Button
+                                    className="whitespace-nowrap flex items-center gap-2"
+                                    onClick={() => { setEditingContact(null); setFormData({ category: 'society' }); setShowModal(true); }}
+                                >
+                                    <Plus size={20} />
+                                    Add New Entry
+                                </Button>
+                            )}
                         </div>
                     </>
                 )}

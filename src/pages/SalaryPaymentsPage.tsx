@@ -36,20 +36,35 @@ export const SalaryPaymentsPage: React.FC = () => {
     };
 
     const handleRequestSalary = async (formData: any) => {
+        if (!user?.uid || !user?.societyId) {
+            toast.error('Identity not verified. Please login again.');
+            return;
+        }
+
         try {
+            console.log('SalaryPaymentsPage: Submitting request...', {
+                guardId: user.uid,
+                societyId: user.societyId,
+                amount: formData.amount,
+                month: formData.month
+            });
+
             await SalaryPaymentService.createSalaryRequest({
-                guardId: user?.uid,
-                societyId: user?.societyId,
+                guardId: user.uid,
+                societyId: user.societyId,
                 amount: formData.amount,
                 month: formData.month,
                 status: 'pending',
                 requestedAt: new Date().toISOString()
             });
+
             toast.success('Salary request submitted successfully');
             setShowRequestModal(false);
             loadPayments();
-        } catch (error) {
-            toast.error('Failed to submit request');
+        } catch (error: any) {
+            console.error('SalaryPaymentsPage: Request failed:', error);
+            const errorMsg = error.message || 'Failed to submit request';
+            toast.error(errorMsg);
         }
     };
 
