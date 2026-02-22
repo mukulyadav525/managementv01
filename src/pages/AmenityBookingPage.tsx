@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, Plus, ChevronRight, Info, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, Plus, ChevronRight, Info, Users, Trash2, Edit2, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
@@ -16,6 +16,9 @@ export const AmenityBookingPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [amenities, setAmenities] = useState<Amenity[]>([]);
     const [myBookings, setMyBookings] = useState<Booking[]>([]);
+    const [showModal, setShowModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState<any>({});
 
     useEffect(() => {
         if (user?.societyId) {
@@ -48,6 +51,42 @@ export const AmenityBookingPage: React.FC = () => {
         toast.success(`Booking flow initiated for ${amenity.name}`);
     };
 
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this amenity?')) return;
+        try {
+            await AmenityService.deleteAmenity(id);
+            toast.success('Amenity deleted');
+            loadData();
+        } catch (error) {
+            toast.error('Delete failed');
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            const data = { ...formData, societyId: user!.societyId };
+            await AmenityService.createAmenity({
+                ...data,
+                bookingType: data.bookingType || 'slot',
+                status: data.status || 'available',
+                pricePerHour: Number(data.pricePerHour) || 0,
+                capacity: Number(data.capacity) || 0,
+                rules: data.rules ? data.rules.split(',').map((r: string) => r.trim()) : []
+            });
+
+            toast.success(`Amenity created successfully`);
+            setShowModal(false);
+            setFormData({});
+            loadData();
+        } catch (error) {
+            toast.error('Failed to create amenity');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'available': return 'bg-green-100 text-green-700';
@@ -67,6 +106,12 @@ export const AmenityBookingPage: React.FC = () => {
                         <p className="text-gray-600 mt-1">Book society facilities and manage your reservations</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        {user?.role === 'admin' && (
+                            <Button onClick={() => setShowModal(true)} className="flex items-center gap-2">
+                                <Plus size={20} />
+                                Add Amenity
+                            </Button>
+                        )}
                         <Button variant="secondary" className="flex items-center gap-2">
                             <Calendar size={18} />
                             My Bookings
@@ -114,9 +159,24 @@ export const AmenityBookingPage: React.FC = () => {
                                                 <div>
                                                     <div className="flex items-center justify-between mb-2">
                                                         <h3 className="font-bold text-lg text-gray-900">{amenity.name}</h3>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(amenity.status)}`}>
-                                                            {amenity.status}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {user?.role === 'admin' && (
+                                                                <div className="flex items-center gap-1.5 mr-2">
+                                                                    <button className="text-gray-400 hover:text-primary-600 transition-colors">
+                                                                        <Edit2 size={14} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDelete(amenity.id)}
+                                                                        className="text-gray-400 hover:text-red-600 transition-colors"
+                                                                    >
+                                                                        <Trash2 size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(amenity.status)}`}>
+                                                                {amenity.status}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <p className="text-sm text-gray-600 line-clamp-2 mb-3">{amenity.description}</p>
                                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 font-medium">
@@ -226,6 +286,104 @@ export const AmenityBookingPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {showModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-lg">
+                        <form onSubmit={handleSubmit} className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Add New Amenity</h3>
+                                <button type="button" onClick={() => setShowModal(false)}><X /></button>
+                            </div>
+
+                            <div className="space-y-4 mb-8">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Name / Title</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.name || ''}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="Amenity Name"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Location</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.location || ''}
+                                            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Price/hr</label>
+                                        <input
+                                            type="number"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.pricePerHour || ''}
+                                            onChange={(e) => setFormData({ ...formData, pricePerHour: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Capacity</label>
+                                        <input
+                                            type="number"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.capacity || ''}
+                                            onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Booking Type</label>
+                                        <select
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.bookingType || 'slot'}
+                                            onChange={(e) => setFormData({ ...formData, bookingType: e.target.value })}
+                                        >
+                                            <option value="slot">Slot-based</option>
+                                            <option value="full_day">Full Day</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Rules (Comma separated)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.rules || ''}
+                                        onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
+                                        placeholder="e.g. No smoking, Mask required"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                                    <textarea
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        rows={2}
+                                        value={formData.description || ''}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+                                <Button type="submit" disabled={submitting} className="flex-1">
+                                    {submitting ? 'Creating...' : 'Create Amenity'}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
         </Layout>
     );
 };

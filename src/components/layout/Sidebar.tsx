@@ -45,7 +45,6 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'Flats', path: '/flats', icon: Building2, roles: ['admin', 'owner'] },
     { name: 'Residents', path: '/residents', icon: Users, roles: ['admin'] },
     { name: 'Staff', path: '/admin/staff', icon: UserCircle, roles: ['admin'] },
-    { name: 'Management', path: '/admin/management', icon: Settings, roles: ['admin'] },
     { name: 'Residents', path: '/security/residents', icon: Users, roles: ['security'] },
     { name: 'Salaries', path: '/admin/salary', icon: Wallet, roles: ['admin'] },
     { name: 'Visitors', path: '/visitors', icon: UserCircle, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },

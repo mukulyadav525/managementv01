@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Vote, FileText, CheckCircle2, Clock, BarChart3, Plus, ChevronRight, AlertTriangle, Users } from 'lucide-react';
+import { Vote, FileText, CheckCircle2, Clock, BarChart3, Plus, ChevronRight, AlertTriangle, Users, Trash2, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
@@ -12,6 +12,11 @@ export const PollsPage: React.FC = () => {
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [polls, setPolls] = useState<Poll[]>([]);
+    const [showModal, setShowModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState<any>({
+        category: 'general'
+    });
 
     useEffect(() => {
         if (user?.societyId) {
@@ -55,6 +60,45 @@ export const PollsPage: React.FC = () => {
         }
     };
 
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this poll?')) return;
+        try {
+            await PollService.deletePoll(id);
+            toast.success('Poll deleted');
+            loadPolls();
+        } catch (error) {
+            toast.error('Delete failed');
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            const data = { ...formData, societyId: user!.societyId };
+            const options = data.optionsString ? data.optionsString.split(',').map((o: string) => o.trim()) : ['Yes', 'No'];
+
+            await PollService.createPoll({
+                title: data.title,
+                description: data.description,
+                category: data.category || 'general',
+                societyId: data.societyId,
+                createdBy: user!.uid,
+                status: 'active',
+                endsAt: data.endsAt
+            }, options);
+
+            toast.success('Poll created successfully');
+            setShowModal(false);
+            setFormData({ category: 'general' });
+            loadPolls();
+        } catch (error) {
+            toast.error('Failed to create poll');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const calculatePercentage = (votes: number, total: number) => {
         if (total === 0) return 0;
         return Math.round((votes / total) * 100);
@@ -69,7 +113,7 @@ export const PollsPage: React.FC = () => {
                         <p className="text-gray-600 mt-1">Participate in decision making for your community</p>
                     </div>
                     {user?.role === 'admin' && (
-                        <Button className="flex items-center gap-2">
+                        <Button onClick={() => setShowModal(true)} className="flex items-center gap-2">
                             <Plus size={20} />
                             Create New Poll
                         </Button>
@@ -106,6 +150,14 @@ export const PollsPage: React.FC = () => {
                                                         {poll.category}
                                                     </span>
                                                     <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                                                        {user?.role === 'admin' && (
+                                                            <button
+                                                                onClick={() => handleDelete(poll.id)}
+                                                                className="mr-3 text-gray-400 hover:text-red-600 transition-colors"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
                                                         <Clock size={14} />
                                                         Ends {poll.endsAt ? new Date(poll.endsAt).toLocaleDateString() : 'No expiry'}
                                                     </span>
@@ -214,6 +266,86 @@ export const PollsPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {showModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-lg">
+                        <form onSubmit={handleSubmit} className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Create New Poll</h3>
+                                <button type="button" onClick={() => setShowModal(false)}><X /></button>
+                            </div>
+
+                            <div className="space-y-4 mb-8">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Poll Title</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.title || ''}
+                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                        placeholder="e.g. New Clubhouse Proposal"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                                    <select
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.category || 'general'}
+                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    >
+                                        <option value="general">General</option>
+                                        <option value="financial">Financial</option>
+                                        <option value="event">Event</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Ends At</label>
+                                    <input
+                                        type="date"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.endsAt || ''}
+                                        onChange={(e) => setFormData({ ...formData, endsAt: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Options (Comma separated)</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.optionsString || ''}
+                                        onChange={(e) => setFormData({ ...formData, optionsString: e.target.value })}
+                                        placeholder="e.g. Yes, No, Needs Review"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1 italic">Default options: Yes, No</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                                    <textarea
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        rows={2}
+                                        value={formData.description || ''}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+                                <Button type="submit" disabled={submitting} className="flex-1">
+                                    {submitting ? 'Creating...' : 'Launch Poll'}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
         </Layout>
     );
 };

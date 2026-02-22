@@ -32,7 +32,6 @@ import { SalaryPaymentsPage } from './pages/SalaryPaymentsPage';
 import { CCTVPage } from './pages/CCTVPage';
 import { AdminSalaryPage } from './pages/admin/AdminSalaryPage';
 import { StaffPage } from './pages/admin/StaffPage';
-import { AdminManagementPage } from './pages/admin/AdminManagementPage';
 import { OwnerStaffPage } from './pages/OwnerStaffPage';
 import { EmergencyDirectoryPage } from './pages/EmergencyDirectoryPage';
 import { AmenityBookingPage } from './pages/AmenityBookingPage';
@@ -353,14 +352,6 @@ function App() {
           }
         />
 
-        <Route
-          path="/admin/management"
-          element={
-            <RoleProtectedRoute allowedRoles={['admin']}>
-              <AdminManagementPage />
-            </RoleProtectedRoute>
-          }
-        />
         <Route
           path="/admin/salary"
           element={

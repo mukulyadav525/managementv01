@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Shield, LifeBuoy, Heart, Wrench, Search, MapPin } from 'lucide-react';
+import { Phone, Shield, LifeBuoy, Heart, Wrench, Search, MapPin, Plus, Trash2, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button } from '@/components/common';
 import { EmergencyService } from '@/services/supabase.service';
@@ -12,6 +12,11 @@ export const EmergencyDirectoryPage: React.FC = () => {
     const { user } = useAuthStore();
     const [loading, setLoading] = useState(true);
     const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+    const [showModal, setShowModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState<any>({
+        category: 'society'
+    });
 
     React.useEffect(() => {
         if (user?.societyId) {
@@ -37,6 +42,37 @@ export const EmergencyDirectoryPage: React.FC = () => {
         contact.description?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const handleDelete = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this contact?')) return;
+        try {
+            await EmergencyService.deleteContact(id);
+            toast.success('Contact deleted');
+            loadContacts();
+        } catch (error) {
+            toast.error('Delete failed');
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await EmergencyService.createContact({
+                ...formData,
+                societyId: user!.societyId
+            });
+
+            toast.success('Contact added successfully');
+            setShowModal(false);
+            setFormData({ category: 'society' });
+            loadContacts();
+        } catch (error) {
+            toast.error('Failed to add contact');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     const getCategoryIcon = (category: string) => {
         switch (category) {
             case 'emergency': return <Shield className="text-red-500" size={24} />;
@@ -60,9 +96,17 @@ export const EmergencyDirectoryPage: React.FC = () => {
     return (
         <Layout>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Emergency Directory</h1>
-                    <p className="text-gray-600 mt-1">Quick access to essential services and society helpdesk</p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">Emergency Directory</h1>
+                        <p className="text-gray-600 mt-1">Quick access to essential services and society helpdesk</p>
+                    </div>
+                    {user?.role === 'admin' && (
+                        <Button onClick={() => setShowModal(true)} className="flex items-center gap-2">
+                            <Plus size={20} />
+                            Add Contact
+                        </Button>
+                    )}
                 </div>
 
                 {loading ? (
@@ -93,7 +137,17 @@ export const EmergencyDirectoryPage: React.FC = () => {
                                         <Shield size={120} />
                                     </div>
                                     <p className="text-red-100 text-sm font-medium uppercase tracking-wider mb-1">{contact.name}</p>
-                                    <h2 className="text-3xl font-black mb-4">{contact.phone}</h2>
+                                    <div className="flex justify-between items-start">
+                                        <h2 className="text-3xl font-black mb-4">{contact.phone}</h2>
+                                        {user?.role === 'admin' && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDelete(contact.id); }}
+                                                className="p-1.5 bg-white/10 hover:bg-white/30 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                    </div>
                                     <a
                                         href={`tel:${contact.phone}`}
                                         className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm font-bold backdrop-blur-sm transition-colors"
@@ -136,6 +190,14 @@ export const EmergencyDirectoryPage: React.FC = () => {
                                                         >
                                                             <Phone size={14} />
                                                         </a>
+                                                        {user?.role === 'admin' && (
+                                                            <button
+                                                                onClick={() => handleDelete(contact.id)}
+                                                                className="p-2 bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     {contact.description && <p className="text-sm text-gray-600 mb-3">{contact.description}</p>}
                                                     <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-50 mt-1">
@@ -174,6 +236,96 @@ export const EmergencyDirectoryPage: React.FC = () => {
                     </>
                 )}
             </div>
+
+            {showModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-lg">
+                        <form onSubmit={handleSubmit} className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Add New Contact</h3>
+                                <button type="button" onClick={() => setShowModal(false)}><X /></button>
+                            </div>
+
+                            <div className="space-y-4 mb-8">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Name / Service</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.name || ''}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="e.g. Electrician, Water Tanker"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Role / Office</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.role || ''}
+                                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Phone</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.phone || ''}
+                                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Category</label>
+                                    <select
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.category || 'society'}
+                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    >
+                                        <option value="emergency">Emergency</option>
+                                        <option value="society">Society</option>
+                                        <option value="medical">Medical</option>
+                                        <option value="essential">Essential</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Email (Optional)</label>
+                                    <input
+                                        type="email"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.email || ''}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                                    <textarea
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        rows={2}
+                                        value={formData.description || ''}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+                                <Button type="submit" disabled={submitting} className="flex-1">
+                                    {submitting ? 'Adding...' : 'Add Contact'}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
         </Layout>
     );
 };

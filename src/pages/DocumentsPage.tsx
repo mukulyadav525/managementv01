@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Shield, Eye, Search, Plus, Trash2, FolderOpen, Lock, Globe } from 'lucide-react';
+import { FileText, Download, Shield, Eye, Search, Plus, Trash2, FolderOpen, Lock, Globe, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
@@ -14,6 +14,9 @@ export const DocumentsPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'society' | 'personal'>('society');
     const [searchQuery, setSearchQuery] = useState('');
     const [documents, setDocuments] = useState<DocType[]>([]);
+    const [showModal, setShowModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState<any>({});
 
     useEffect(() => {
         if (user?.societyId) {
@@ -50,7 +53,30 @@ export const DocumentsPage: React.FC = () => {
     };
 
     const handleUpload = () => {
-        toast.success('Upload feature would open file selector here');
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await DocumentService.createDocumentEx({
+                ...formData,
+                societyId: user!.societyId,
+                category: activeTab, // Use current tab (society or personal)
+                uploadedBy: user!.name,
+                ownerId: activeTab === 'personal' ? user!.uid : undefined
+            });
+
+            toast.success('Document uploaded successfully');
+            setShowModal(false);
+            setFormData({});
+            loadDocs();
+        } catch (error) {
+            toast.error('Failed to upload document');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -130,6 +156,8 @@ export const DocumentsPage: React.FC = () => {
                                                 <button
                                                     onClick={() => handleDelete(doc.id)}
                                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                    disabled={doc.category === 'society' && user?.role !== 'admin'}
+                                                    title={doc.category === 'society' && user?.role !== 'admin' ? "Only admins can delete society documents" : "Delete"}
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -179,6 +207,76 @@ export const DocumentsPage: React.FC = () => {
                     </Button>
                 </div>
             </div>
+
+            {showModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-lg">
+                        <form onSubmit={handleSubmit} className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Upload New {activeTab === 'society' ? 'Society' : 'Personal'} Document</h3>
+                                <button type="button" onClick={() => setShowModal(false)}><X /></button>
+                            </div>
+
+                            <div className="space-y-4 mb-8">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Document Name</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.name || ''}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        placeholder="e.g. Society Bylaws"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Doc Type</label>
+                                        <input
+                                            placeholder="e.g. PDF, Image"
+                                            required
+                                            type="text"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.docType || ''}
+                                            onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">File Size</label>
+                                        <input
+                                            placeholder="e.g. 1.2 MB"
+                                            required
+                                            type="text"
+                                            className="w-full px-4 py-2 border rounded-xl"
+                                            value={formData.fileSize || ''}
+                                            onChange={(e) => setFormData({ ...formData, fileSize: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">File URL</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        value={formData.fileUrl || ''}
+                                        onChange={(e) => setFormData({ ...formData, fileUrl: e.target.value })}
+                                        placeholder="Link to file"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+                                <Button type="submit" disabled={submitting} className="flex-1">
+                                    {submitting ? 'Uploading...' : 'Upload Document'}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
         </Layout>
     );
 };

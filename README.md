@@ -194,10 +194,10 @@ npm run preview
 
 After setting up Supabase Authentication, create test users:
 
-- **Admin**: admin@society.com / password123
-- **Owner**: owner@society.com / password123
-- **Tenant**: tenant@society.com / password123
-- **Security**: security@society.com / password123
+- **Admin**: [EMAIL_ADDRESS] / password
+- **Owner**: [EMAIL_ADDRESS] / password
+- **Tenant**: [EMAIL_ADDRESS] / password
+- **Security**: [EMAIL_ADDRESS] / password
 
 ## 📁 Project Structure
 
@@ -255,7 +255,7 @@ The easiest way to deploy is to connect your GitHub repository to Vercel.
 3. Add environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
 4. Vercel will automatically build and deploy.
 
-Your app will be live at: `https://your-project.vercel.app`
+Your app will be live at: `https://societyprabandh.netlify.app`
 
 ## 📱 Future Enhancements
 
@@ -280,16 +280,6 @@ Your app will be live at: `https://your-project.vercel.app`
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🐛 Known Issues
-
-- Image upload progress not shown
-- Receipt generation needs implementation
-- Payment gateway integration pending
-
 ## 📧 Support
 
 For support, email: support@societymanager.com
@@ -302,5 +292,3 @@ For support, email: support@societymanager.com
 - Open source community
 
 ---
-
-**Built with ❤️ for better society management**
