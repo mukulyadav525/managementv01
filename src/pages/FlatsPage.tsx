@@ -15,6 +15,7 @@ export const FlatsPage: React.FC = () => {
     const { user } = useAuthStore();
     const [flats, setFlats] = useState<Flat[]>([]);
     const [buildings, setBuildings] = useState<Building[]>([]);
+    const [residents, setResidents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showBuildingListModal, setShowBuildingListModal] = useState(false);
@@ -54,6 +55,17 @@ export const FlatsPage: React.FC = () => {
             } catch (err: any) {
                 console.error('Error loading buildings:', err);
                 toast.error('Failed to load building data. Please check permissions.');
+            }
+
+            // Fetch residents for owner/tenant name display
+            try {
+                const { data: usersData } = await supabase
+                    .from('users')
+                    .select('uid, name, role')
+                    .eq('society_id', user.societyId);
+                setResidents(usersData || []);
+            } catch (err: any) {
+                console.error('Error loading residents:', err);
             }
 
         } catch (error) {
@@ -303,6 +315,7 @@ export const FlatsPage: React.FC = () => {
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Floor</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Occupant</th>
                                         {user?.role === 'admin' && (
                                             <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
                                         )}
@@ -311,6 +324,8 @@ export const FlatsPage: React.FC = () => {
                                 <tbody className="divide-y">
                                     {flats.length > 0 ? flats.map((flat) => {
                                         const building = buildings.find(b => b.id === flat.buildingId);
+                                        const owner = residents.find((r: any) => r.uid === flat.ownerId);
+                                        const tenant = residents.find((r: any) => r.uid === flat.tenantId);
                                         return (
                                             <tr key={flat.id} className={`hover:bg-gray-50 ${selectedFlats.has(flat.id) ? 'bg-blue-50' : ''}`}>
                                                 {user?.role === 'admin' && (
@@ -334,6 +349,16 @@ export const FlatsPage: React.FC = () => {
                                                             flat.occupancyStatus === 'rented' ? 'Tenant Occupied' :
                                                                 'Vacant'}
                                                     </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {owner ? (
+                                                        <div className="text-sm font-medium text-gray-800">{owner.name}</div>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">—</span>
+                                                    )}
+                                                    {tenant && (
+                                                        <div className="text-xs text-blue-500">+ {tenant.name} (tenant)</div>
+                                                    )}
                                                 </td>
                                                 {user?.role === 'admin' && (
                                                     <td className="px-6 py-4 space-x-2">
