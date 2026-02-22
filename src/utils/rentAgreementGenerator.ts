@@ -32,6 +32,13 @@ export const generateRentAgreementPDF = (data: GenerationData): Blob => {
         return yPos + (lines.length * 7);
     };
 
+    // Safe address fields — handles null/undefined society.address gracefully
+    const addr = (society as any)?.address || {};
+    const societyAddr = [
+        addr.street, addr.area, addr.city,
+        addr.state && addr.pincode ? `${addr.state} - ${addr.pincode}` : (addr.state || addr.pincode)
+    ].filter(Boolean).join(', ');
+
     // Header
     centerText('RENT AGREEMENT', y, 22, 'bold');
     y += 15;
@@ -49,7 +56,7 @@ export const generateRentAgreementPDF = (data: GenerationData): Blob => {
 
     // Landlord
     doc.setFont('helvetica', 'normal');
-    let landlordText = `Mr./Ms. ${owner.name}, S/o D/o W/o ____________________, residing at ${society.name}, ${society.address.street}, ${society.address.city}, ${society.address.state} - ${society.address.pincode}, hereinafter referred to as the "LANDLORD" (which expression shall unless repugnant to the context or meaning thereof mean and include his/her heirs, executors, administrators and assigns) of the FIRST PART.`;
+    let landlordText = `Mr./Ms. ${owner?.name || 'Owner'}, S/o D/o W/o ____________________, residing at ${society?.name || 'the Society'}${societyAddr ? `, ${societyAddr}` : ''}, hereinafter referred to as the "LANDLORD" (which expression shall unless repugnant to the context or meaning thereof mean and include his/her heirs, executors, administrators and assigns) of the FIRST PART.`;
     y = addWrappedText(landlordText, margin, y, 170);
     y += 5;
 
@@ -58,7 +65,7 @@ export const generateRentAgreementPDF = (data: GenerationData): Blob => {
 
     // Tenant
     doc.setFont('helvetica', 'normal');
-    let tenantText = `Mr./Ms. ${tenant.name}, S/o D/o W/o ____________________, permanent resident of ______________________________________________________________________, hereinafter referred to as the "TENANT" (which expression shall unless repugnant to the context or meaning thereof mean and include his/her heirs, executors, administrators and assigns) of the SECOND PART.`;
+    let tenantText = `Mr./Ms. ${tenant?.name || 'Tenant'}, S/o D/o W/o ____________________, permanent resident of ______________________________________________________________________, hereinafter referred to as the "TENANT" (which expression shall unless repugnant to the context or meaning thereof mean and include his/her heirs, executors, administrators and assigns) of the SECOND PART.`;
     y = addWrappedText(tenantText, margin, y, 170);
     y += 15;
 
@@ -67,7 +74,7 @@ export const generateRentAgreementPDF = (data: GenerationData): Blob => {
     doc.text('WHEREAS:', margin, y);
     y += 10;
     doc.setFont('helvetica', 'normal');
-    let propertyDesc = `The Landlord is the absolute owner of the residential property Unit No. ${flat.flatNumber}${building ? `, ${building.name}` : ''} at ${society.name}, situated at ${society.address.street}, ${society.address.area}, ${society.address.city}, ${society.address.state} - ${society.address.pincode} (hereinafter referred to as the "DEMISED PREMISES").`;
+    let propertyDesc = `The Landlord is the absolute owner of the residential property Unit No. ${flat?.flatNumber || 'N/A'}${building ? `, ${building.name}` : ''} at ${society?.name || 'the Society'}${societyAddr ? `, situated at ${societyAddr}` : ''} (hereinafter referred to as the "DEMISED PREMISES").`;
     y = addWrappedText(propertyDesc, margin, y, 170);
     y += 15;
 
@@ -114,8 +121,8 @@ export const generateRentAgreementPDF = (data: GenerationData): Blob => {
 
     y += 5;
     doc.setFont('helvetica', 'normal');
-    doc.text(`(${owner.name})`, margin, y);
-    doc.text(`(${tenant.name})`, 140, y);
+    doc.text(`(${owner?.name || 'Owner'})`, margin, y);
+    doc.text(`(${tenant?.name || 'Tenant'})`, 140, y);
 
     return doc.output('blob');
 };
