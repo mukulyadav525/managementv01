@@ -24,7 +24,7 @@ export const RegisterPage: React.FC = () => {
         phone: '',
         role: 'tenant' as any,
         societyName: '',
-        societyType: 'tower',
+        societyType: 'tower' as 'tower' | 'house',
         societyId: ''
     });
     const [societies, setSocieties] = useState<any[]>([]);
@@ -183,7 +183,7 @@ export const RegisterPage: React.FC = () => {
                                     <select
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                                         value={formData.societyType}
-                                        onChange={(e) => setFormData({ ...formData, societyType: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, societyType: e.target.value as 'tower' | 'house' })}
                                         required
                                     >
                                         <option value="tower">Tower-based (Apartments/Flats)</option>

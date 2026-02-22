@@ -385,16 +385,16 @@ export const OwnerTenantsPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* Modals */}
-                <AddTenantModal
-                    isOpen={showAddTenantModal}
-                    onClose={() => setShowAddTenantModal(false)}
-                    onSuccess={loadOwnedData}
-                    ownedFlats={flats}
-                    societyId={user?.societyId || ''}
-                />
-
-                <EditTenantModal
+                {showAddTenantModal && user && (
+                    <AddTenantModal
+                        isOpen={showAddTenantModal}
+                        onClose={() => setShowAddTenantModal(false)}
+                        onSuccess={loadOwnedData}
+                        ownedFlats={flats}
+                        societyId={user.societyId}
+                        societyType={user.societyType}
+                    />
+                )} <EditTenantModal
                     isOpen={showEditTenantModal.isOpen}
                     onClose={() => setShowEditTenantModal({ isOpen: false, tenant: null })}
                     onSuccess={loadOwnedData}

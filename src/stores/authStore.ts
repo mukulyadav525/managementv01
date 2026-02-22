@@ -61,6 +61,18 @@ export const useAuthStore = create<AuthState>((set) => ({
           console.log('authStore: Profile fetched successfully:', userData);
           const user = toCamel(userData) as User;
 
+          // Fetch societyType
+          if (user.societyId) {
+            const { data: socData } = await supabase
+              .from('societies')
+              .select('society_type')
+              .eq('id', user.societyId)
+              .single();
+            if (socData) {
+              user.societyType = socData.society_type;
+            }
+          }
+
           // Validate role
           const validRoles = ['admin', 'owner', 'tenant', 'security', 'staff'];
           if (!user.role || !validRoles.includes(user.role)) {
@@ -258,7 +270,20 @@ export const useAuthStore = create<AuthState>((set) => ({
           }
         } else if (userData) {
           console.log('authStore: [INIT] Profile synced successfully');
-          set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
+          const user = toCamel(userData) as User;
+
+          if (user.societyId) {
+            const { data: socData } = await supabase
+              .from('societies')
+              .select('society_type')
+              .eq('id', user.societyId)
+              .single();
+            if (socData) {
+              user.societyType = socData.society_type;
+            }
+          }
+
+          set({ user, loading: false, needsCompletion: false });
         }
       } catch (err) {
         console.error('authStore: [INIT] Critical sync error:', err);

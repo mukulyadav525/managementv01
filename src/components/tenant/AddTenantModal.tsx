@@ -10,6 +10,7 @@ interface AddTenantModalProps {
     onSuccess: () => void;
     ownedFlats: Flat[];
     societyId: string;
+    societyType?: 'tower' | 'house';
 }
 
 export const AddTenantModal: React.FC<AddTenantModalProps> = ({
@@ -17,8 +18,10 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
     onClose,
     onSuccess,
     ownedFlats,
-    societyId
+    societyId,
+    societyType
 }) => {
+    const isHouse = societyType === 'house';
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -28,7 +31,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
         moveInDate: '',
         emergencyContactName: '',
         emergencyContactPhone: '',
-        emergencyContactRelation: ''
+        emergencyContactRelation: '',
+        tenantFloor: '' // Used for House specific allocations
     });
     const [loading, setLoading] = useState(false);
     const [selectedFloor, setSelectedFloor] = useState<string>('');
@@ -37,13 +41,39 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
     const uniqueFloors = Array.from(new Set(ownedFlats.map(f => f.floor))).sort((a, b) => a - b);
 
     const filteredFlats = ownedFlats.filter(f => {
-        const isVacantOrOwner = f.occupancyStatus === 'vacant' || f.occupancyStatus === 'owner-occupied';
-        const matchesFloor = selectedFloor ? f.floor.toString() === selectedFloor : true;
-        return isVacantOrOwner && matchesFloor;
+        if (isHouse) {
+            // In a house, a flat is eligible if it has available floors. 
+            // We can do deeper validation inside the form.
+            return true;
+        } else {
+            const isVacantOrOwner = f.occupancyStatus === 'vacant' || f.occupancyStatus === 'owner-occupied';
+            const matchesFloor = selectedFloor ? f.floor.toString() === selectedFloor : true;
+            return isVacantOrOwner && matchesFloor;
+        }
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        const selectedFlat = ownedFlats.find(f => f.id === formData.flatId);
+        if (!selectedFlat) return toast.error('Please select a valid unit');
+
+        if (isHouse) {
+            if (!formData.tenantFloor) {
+                return toast.error('Please specify the floor for the tenant');
+            }
+            const tenantFloorNum = parseInt(formData.tenantFloor);
+            if (tenantFloorNum < 1 || (selectedFlat.totalFloors && tenantFloorNum > selectedFlat.totalFloors)) {
+                return toast.error(`Invalid floor. House has ${selectedFlat.totalFloors || 'unknown'} floors.`);
+            }
+            if (selectedFlat.ownerLivesInHouse && selectedFlat.ownerFloorNumber === tenantFloorNum) {
+                return toast.error('Cannot assign tenant to the floor where the owner lives.');
+            }
+            if (selectedFlat.tenantsByFloor && selectedFlat.tenantsByFloor[tenantFloorNum.toString()]) {
+                return toast.error(`Floor ${tenantFloorNum} is already occupied by a tenant!`);
+            }
+        }
+
         setLoading(true);
 
         try {
@@ -141,12 +171,27 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
             }
 
             // 3. Update flat occupancy status (for both new and existing)
+            const flatUpdate: any = {
+                updated_at: new Date().toISOString()
+            };
+
+            if (isHouse) {
+                const currentTenants = selectedFlat?.tenantsByFloor || {};
+                const safeTenants = { ...currentTenants };
+                safeTenants[formData.tenantFloor] = userId;
+
+                flatUpdate.tenants_by_floor = safeTenants;
+                flatUpdate.occupancy_status = 'rented'; // At least 1 tenant exists
+                // Use first tenant as generic reference if needed by old queries
+                flatUpdate.current_tenant_id = Object.values(safeTenants)[0] || null;
+            } else {
+                flatUpdate.occupancy_status = 'rented';
+                flatUpdate.current_tenant_id = userId;
+            }
+
             const { error: flatError } = await supabase
                 .from('flats')
-                .update({
-                    occupancy_status: 'rented',
-                    tenant_id: userId
-                })
+                .update(flatUpdate)
                 .eq('id', formData.flatId);
 
             if (flatError) throw flatError;
@@ -172,7 +217,8 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
             moveInDate: '',
             emergencyContactName: '',
             emergencyContactPhone: '',
-            emergencyContactRelation: ''
+            emergencyContactRelation: '',
+            tenantFloor: ''
         });
     };
 
@@ -216,41 +262,81 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                     />
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Filter by Floor
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                value={selectedFloor}
-                                onChange={(e) => setSelectedFloor(e.target.value)}
-                            >
-                                <option value="">All Floors</option>
-                                {uniqueFloors.map((floor) => (
-                                    <option key={floor} value={floor}>
-                                        Floor {floor}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
+                        {!isHouse && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Filter by Floor
+                                </label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    value={selectedFloor}
+                                    onChange={(e) => setSelectedFloor(e.target.value)}
+                                >
+                                    <option value="">All Floors</option>
+                                    {uniqueFloors.map((floor) => (
+                                        <option key={floor} value={floor}>
+                                            Floor {floor}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        <div className={isHouse ? "col-span-2 md:col-span-1" : ""}>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Select Unit <span className="text-red-500">*</span>
                             </label>
                             <select
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 value={formData.flatId}
-                                onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, flatId: e.target.value, tenantFloor: '' });
+                                }}
                                 required
                             >
                                 <option value="">Choose a unit</option>
                                 {filteredFlats.map((flat) => (
                                     <option key={flat.id} value={flat.id}>
-                                        Unit {flat.flatNumber} - {flat.bhkType} (Floor {flat.floor})
+                                        {isHouse ? `House ` : `Unit `} {flat.flatNumber} {isHouse ? `(${flat.totalFloors || 0} Floors)` : `(Floor ${flat.floor})`}
                                     </option>
                                 ))}
                             </select>
                         </div>
+
+                        {isHouse && formData.flatId && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tenant Floor <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    value={formData.tenantFloor}
+                                    onChange={(e) => setFormData({ ...formData, tenantFloor: e.target.value })}
+                                    required={isHouse}
+                                >
+                                    <option value="">Select Floor</option>
+                                    {/* Generate floors for the selected house */}
+                                    {(() => {
+                                        const house = ownedFlats.find(f => f.id === formData.flatId);
+                                        if (!house) return null;
+
+                                        return Array.from({ length: house.totalFloors || 1 }, (_, i) => i + 1).map(floor => {
+                                            const isOwnerFloor = house.ownerLivesInHouse && house.ownerFloorNumber === floor;
+                                            const isOccupied = house.tenantsByFloor && !!house.tenantsByFloor[floor.toString()];
+
+                                            return (
+                                                <option
+                                                    key={floor}
+                                                    value={floor}
+                                                    disabled={isOwnerFloor || isOccupied}
+                                                >
+                                                    Floor {floor} {isOwnerFloor ? '(Owner)' : (isOccupied ? '(Occupied)' : '(Vacant)')}
+                                                </option>
+                                            );
+                                        });
+                                    })()}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     <Input

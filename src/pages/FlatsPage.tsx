@@ -306,6 +306,7 @@ export const FlatsPage: React.FC = () => {
                         onSubmit={handleSaveFlat}
                         initialData={editingFlat}
                         buildings={buildings}
+                        societyType={user?.societyType}
                     />
                 )}
 
@@ -324,6 +325,7 @@ export const FlatsPage: React.FC = () => {
                         onClose={() => setAssignOccupantsUnit(null)}
                         unit={assignOccupantsUnit}
                         societyId={user.societyId}
+                        societyType={user.societyType}
                         onSuccess={loadFlats}
                     />
                 )}
@@ -458,11 +460,16 @@ const FlatModal: React.FC<{
     onSubmit: (data: any) => void;
     initialData?: Flat | null;
     buildings: Building[];
-}> = ({ isOpen, onClose, onSubmit, initialData, buildings }) => {
+    societyType?: 'tower' | 'house';
+}> = ({ isOpen, onClose, onSubmit, initialData, buildings, societyType }) => {
+    const isHouse = societyType === 'house';
+
     const [formData, setFormData] = useState({
         buildingId: initialData?.buildingId || '',
         flatNumber: initialData?.flatNumber || '',
         floor: initialData?.floor ?? 1,
+        totalFloors: initialData?.totalFloors || 1,
+        unitType: isHouse ? 'house' : 'flat',
         bhkType: initialData?.bhkType || '2BHK',
         area: initialData?.area || 1200,
         occupancyStatus: (initialData?.occupancyStatus || 'vacant') as any
@@ -473,12 +480,11 @@ const FlatModal: React.FC<{
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Specific floor validation based on building capacity
-        if (!formData.buildingId) {
+        if (!isHouse && !formData.buildingId) {
             return toast.error('Please select a building');
         }
 
-        if (selectedBuilding) {
+        if (!isHouse && selectedBuilding) {
             if (formData.floor < 1) {
                 return toast.error('Floor number must be at least 1');
             }
@@ -487,32 +493,47 @@ const FlatModal: React.FC<{
             }
         }
 
-        onSubmit(formData);
+        if (isHouse && (!formData.totalFloors || formData.totalFloors < 1)) {
+            return toast.error('Total floors for a house must be at least 1');
+        }
+
+        // Clean up data based on type
+        const submitData = { ...formData };
+        if (isHouse) {
+            submitData.buildingId = null as any;
+            submitData.floor = 0; // Or null, but keeping it 0 to avoid breaking sorting if any exists
+        } else {
+            submitData.totalFloors = null as any;
+        }
+
+        onSubmit(submitData);
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={initialData ? 'Edit Flat' : 'Add New Flat'}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Building <span className="text-red-500">*</span></label>
-                    <select
-                        value={formData.buildingId}
-                        onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
-                        required
-                    >
-                        <option value="">Select Building</option>
-                        {buildings.map((b) => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                    </select>
-                </div>
+                {!isHouse && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Building <span className="text-red-500">*</span></label>
+                        <select
+                            value={formData.buildingId}
+                            onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                            required={!isHouse}
+                        >
+                            <option value="">Select Building</option>
+                            {buildings.map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <Input
-                    label="Flat Number"
+                    label={isHouse ? "House Number" : "Flat Number"}
                     value={formData.flatNumber}
                     onChange={(e) => {
                         const val = e.target.value;
-                        const predicted = predictFloor(val);
+                        const predicted = !isHouse ? predictFloor(val) : 0;
                         setFormData({
                             ...formData,
                             flatNumber: val,
@@ -521,14 +542,27 @@ const FlatModal: React.FC<{
                     }}
                     required
                 />
-                <Input
-                    label="Floor"
-                    type="number"
-                    value={formData.floor}
-                    onChange={(e) => setFormData({ ...formData, floor: parseInt(e.target.value) || 0 })}
-                    required
-                    helperText={selectedBuilding ? `Predicted Floor: ${predictFloor(formData.flatNumber)} | Max Floors: ${selectedBuilding.totalFloors}` : `Predicted: ${predictFloor(formData.flatNumber)}`}
-                />
+
+                {isHouse ? (
+                    <Input
+                        label="Total Floors in House"
+                        type="number"
+                        min="1"
+                        value={formData.totalFloors}
+                        onChange={(e) => setFormData({ ...formData, totalFloors: parseInt(e.target.value) || 1 })}
+                        required={isHouse}
+                        helperText="The total number of levels available for allocation."
+                    />
+                ) : (
+                    <Input
+                        label="Floor"
+                        type="number"
+                        value={formData.floor}
+                        onChange={(e) => setFormData({ ...formData, floor: parseInt(e.target.value) || 0 })}
+                        required={!isHouse}
+                        helperText={selectedBuilding ? `Predicted Floor: ${predictFloor(formData.flatNumber)} | Max Floors: ${selectedBuilding.totalFloors}` : `Predicted: ${predictFloor(formData.flatNumber)}`}
+                    />
+                )}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">BHK Type</label>
                     <select

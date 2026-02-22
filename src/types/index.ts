@@ -26,6 +26,7 @@ export interface User {
   profilePicture?: string;
   role: UserRole;
   societyId: string;
+  societyType?: 'tower' | 'house';
   flatIds: string[];
   status: 'active' | 'inactive';
   kycDocuments?: {
@@ -106,6 +107,13 @@ export interface Flat {
   currentTenantId?: string;
   occupancyStatus: OccupancyStatus;
   parkingSlots: string[];
+
+  // House-specific fields
+  totalFloors?: number; // Total number of logical floors in the house
+  ownerLivesInHouse?: boolean; // Whether the owner is an occupant
+  ownerFloorNumber?: number; // The specific floor the owner occupies
+  tenantsByFloor?: Record<string, string>; // Maps floor index to tenantUserId
+
   createdAt: string;
   updatedAt: string;
 }
