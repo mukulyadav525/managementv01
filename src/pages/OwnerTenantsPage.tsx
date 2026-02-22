@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Plus, Search, Edit2, Trash2, Eye, DollarSign, Filter } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Trash2, Eye, DollarSign, Filter, FileText } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal, Input } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
-import { SocietyService, PaymentService } from '@/services/supabase.service';
-import { Flat, User, PaymentType } from '@/types';
+import { SocietyService, PaymentService, RentAgreementService } from '@/services/supabase.service';
+import { Flat, User, PaymentType, RentAgreement } from '@/types';
 import { AddTenantModal } from '@/components/tenant/AddTenantModal';
 import { EditTenantModal } from '@/components/tenant/EditTenantModal';
 import { TenantDetailsModal } from '@/components/tenant/TenantDetailsModal';
+import { RentAgreementModal } from '@/components/tenant/RentAgreementModal';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 
@@ -25,8 +26,10 @@ export const OwnerTenantsPage: React.FC = () => {
     const [showDetailsModal, setShowDetailsModal] = useState<{ isOpen: boolean; tenant: User | null; flatNumber?: string }>({ isOpen: false, tenant: null });
     const [showBillModal, setShowBillModal] = useState<{ isOpen: boolean; flat: Flat | null; tenant: User | null }>({ isOpen: false, flat: null, tenant: null });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ isOpen: boolean; tenant: User | null }>({ isOpen: false, tenant: null });
+    const [showAgreementModal, setShowAgreementModal] = useState<{ isOpen: boolean; flatId: string; tenantId: string; agreement: RentAgreement | null }>({ isOpen: false, flatId: '', tenantId: '', agreement: null });
 
     const [vehicles, setVehicles] = useState<{ [key: string]: any[] }>({});
+    const [agreements, setAgreements] = useState<{ [key: string]: RentAgreement }>({}); // tenantId -> agreement
 
     useEffect(() => {
         if (user) {
@@ -76,6 +79,16 @@ export const OwnerTenantsPage: React.FC = () => {
                     }
                     setVehicles(vehicleMap);
                 }
+
+                // Fetch rent agreements
+                const myAgreements = await RentAgreementService.getRentAgreements(user.uid) as RentAgreement[];
+                const agreementMap: { [key: string]: RentAgreement } = {};
+                if (myAgreements) {
+                    myAgreements.forEach((a) => {
+                        agreementMap[a.tenantId] = a;
+                    });
+                }
+                setAgreements(agreementMap);
             }
         } catch (error) {
             console.error(error);
@@ -333,7 +346,21 @@ export const OwnerTenantsPage: React.FC = () => {
                                                                     className="bg-green-50 text-green-600 hover:bg-green-100 border-green-200"
                                                                     onClick={() => setShowBillModal({ isOpen: true, flat, tenant })}
                                                                 >
-                                                                    Requested Payment
+                                                                    <DollarSign size={16} />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    className={`${agreements[tenant.uid] ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-amber-50 text-amber-600 border-amber-200'}`}
+                                                                    onClick={() => setShowAgreementModal({
+                                                                        isOpen: true,
+                                                                        flatId: flat.id,
+                                                                        tenantId: tenant.uid,
+                                                                        agreement: agreements[tenant.uid] || null
+                                                                    })}
+                                                                    title={agreements[tenant.uid] ? "Edit Rent Agreement" : "Generate Rent Agreement"}
+                                                                >
+                                                                    <FileText size={16} />
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -395,6 +422,16 @@ export const OwnerTenantsPage: React.FC = () => {
                     onClose={() => setShowDeleteConfirm({ isOpen: false, tenant: null })}
                     onConfirm={handleDeleteTenant}
                     tenantName={showDeleteConfirm.tenant?.name || ''}
+                />
+
+                <RentAgreementModal
+                    isOpen={showAgreementModal.isOpen}
+                    onClose={() => setShowAgreementModal({ ...showAgreementModal, isOpen: false })}
+                    onSuccess={loadOwnedData}
+                    flatId={showAgreementModal.flatId}
+                    tenantId={showAgreementModal.tenantId}
+                    ownerId={user?.uid || ''}
+                    existingAgreement={showAgreementModal.agreement}
                 />
             </div>
         </Layout>

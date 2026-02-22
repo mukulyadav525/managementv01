@@ -606,3 +606,24 @@ export class DocumentService extends SupabaseService {
         return this.deleteDocument(`documents`, docId);
     }
 }
+
+// Gate services
+export class GateService extends SupabaseService {
+    static async getGates(societyId: string) {
+        return this.getDocuments(`society_gates`, (q) =>
+            q.eq('society_id', societyId).order('name')
+        );
+    }
+
+    static async createGate(data: any) {
+        return this.createDocument(`society_gates`, data);
+    }
+
+    static async updateGate(gateId: string, data: any) {
+        return this.updateDocument(`society_gates`, gateId, data);
+    }
+
+    static async deleteGate(gateId: string) {
+        return this.deleteDocument(`society_gates`, gateId);
+    }
+}

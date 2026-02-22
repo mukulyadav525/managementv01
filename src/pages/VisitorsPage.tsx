@@ -9,6 +9,9 @@ import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import QRCode from 'qrcode.react';
+import { ManageGatesModal } from '@/components/visitors/ManageGatesModal';
+import { GateService } from '@/services/supabase.service';
+import { Gate } from '@/types';
 
 export const VisitorsPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -18,13 +21,26 @@ export const VisitorsPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'exited'>('all');
+  const [gates, setGates] = useState<Gate[]>([]);
+  const [showManageGates, setShowManageGates] = useState(false);
 
   useEffect(() => {
     if (user?.societyId) {
       loadVisitors();
       loadFlats();
+      loadGates();
     }
   }, [user]);
+
+  const loadGates = async () => {
+    if (!user?.societyId) return;
+    try {
+      const data = await GateService.getGates(user.societyId);
+      setGates(data as Gate[]);
+    } catch (error) {
+      console.error('Error loading gates:', error);
+    }
+  };
 
   const loadFlats = async () => {
     if (!user?.societyId) return;
@@ -402,20 +418,46 @@ export const VisitorsPage: React.FC = () => {
             </Card>
 
             <Card className="p-6 border-none shadow-sm shadow-gray-200/50">
-              <h4 className="font-bold text-gray-900 mb-4">Security Support</h4>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                  <span className="text-sm font-medium text-gray-700">Main Gate</span>
-                  <span className="text-xs font-bold text-green-600">Active</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                  <span className="text-sm font-medium text-gray-700">Service Entry</span>
-                  <span className="text-xs font-bold text-green-600">Active</span>
-                </div>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-bold text-gray-900">Security Support</h4>
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => setShowManageGates(true)}
+                    className="text-xs text-primary-600 hover:underline font-medium"
+                  >
+                    Manage
+                  </button>
+                )}
               </div>
-              <Button variant="secondary" className="w-full mt-4 flex items-center justify-center gap-2 rounded-xl">
-                Contact Gate
-              </Button>
+              <div className="space-y-3">
+                {gates.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No gates configured</p>
+                ) : (
+                  gates.map((gate) => (
+                    <div key={gate.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                      <span className="text-sm font-medium text-gray-700">{gate.name}</span>
+                      <div className="flex items-center gap-2">
+                        {gate.phone && (
+                          <a href={`tel:${gate.phone}`} className="text-xs text-primary-600 hover:underline">
+                            Call
+                          </a>
+                        )}
+                        <span className={`text-[10px] font-bold uppercase ${gate.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                          {gate.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              {gates.length > 0 && gates[0].phone && (
+                <a
+                  href={`tel:${gates[0].phone}`}
+                  className="w-full mt-4 flex items-center justify-center gap-2 rounded-xl bg-gray-200 text-gray-900 hover:bg-gray-300 font-medium px-4 py-2 transition-colors"
+                >
+                  Contact Main Gate
+                </a>
+              )}
             </Card>
           </div>
         </div>
@@ -425,6 +467,14 @@ export const VisitorsPage: React.FC = () => {
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onSubmit={handleAddVisitor}
+        />
+
+        {/* Manage Gates Modal */}
+        <ManageGatesModal
+          isOpen={showManageGates}
+          onClose={() => setShowManageGates(false)}
+          societyId={user?.societyId || ''}
+          onSuccess={loadGates}
         />
 
         {/* Visitor Pass Modal */}

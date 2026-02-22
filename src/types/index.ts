@@ -428,3 +428,13 @@ export interface Document {
   ownerId?: string;
   createdAt: string;
 }
+
+export interface Gate {
+  id: string;
+  societyId: string;
+  name: string;
+  phone?: string;
+  status: 'active' | 'closed' | 'maintenance';
+  createdAt: string;
+  updatedAt: string;
+}

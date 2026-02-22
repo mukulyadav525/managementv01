@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Shield, UserX, UserCheck, Phone, Mail, Edit2, Trash2, UserMinus, Bell, Download } from 'lucide-react';
+import { Users, Shield, UserX, UserCheck, Phone, Mail, Edit2, Trash2, UserMinus, Bell, Download, FileText, ExternalLink } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
@@ -9,6 +9,9 @@ import { supabase } from '@/config/supabase';
 import { exportToCSV } from '@/utils/export';
 import toast from 'react-hot-toast';
 import { predictFloor } from '@/utils/flat.utils';
+import { RentAgreementModal } from '@/components/tenant/RentAgreementModal';
+import { RentAgreementService } from '@/services/supabase.service';
+import { RentAgreement } from '@/types';
 
 export const ResidentsPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -19,8 +22,12 @@ export const ResidentsPage: React.FC = () => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showNotificationModal, setShowNotificationModal] = useState(false);
+    const [showAgreementModal, setShowAgreementModal] = useState<{ isOpen: boolean; flatId: string; tenantId: string; ownerId: string; agreement: RentAgreement | null }>({
+        isOpen: false, flatId: '', tenantId: '', ownerId: '', agreement: null
+    });
     const [selectedResident, setSelectedResident] = useState<User | null>(null);
     const [editingResident, setEditingResident] = useState<User | null>(null);
+    const [agreements, setAgreements] = useState<{ [key: string]: RentAgreement }>({}); // tenantId -> agreement
 
     useEffect(() => {
         if (user?.societyId) {
@@ -37,6 +44,14 @@ export const ResidentsPage: React.FC = () => {
             try {
                 const residentsData = await UserService.getUsers(user.societyId);
                 setResidents(residentsData as User[]);
+
+                // Fetch agreements for all tenants
+                const allAgreements = await RentAgreementService.getRentAgreements() as RentAgreement[];
+                const agreementMap: { [key: string]: RentAgreement } = {};
+                allAgreements.forEach(a => {
+                    agreementMap[a.tenantId] = a;
+                });
+                setAgreements(agreementMap);
             } catch (err: any) {
                 console.error('Error loading residents:', err);
                 toast.error('Failed to load residents. Check permissions.');
@@ -403,6 +418,24 @@ export const ResidentsPage: React.FC = () => {
                                                 >
                                                     <Shield size={20} />
                                                 </button>
+                                                {resident.role === 'tenant' && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const flat = flats.find(f => f.id === resident.flatIds?.[0]);
+                                                            setShowAgreementModal({
+                                                                isOpen: true,
+                                                                flatId: flat?.id || '',
+                                                                tenantId: resident.uid,
+                                                                ownerId: flat?.owner_id || '',
+                                                                agreement: agreements[resident.uid] || null
+                                                            });
+                                                        }}
+                                                        className={`${agreements[resident.uid] ? 'text-blue-600' : 'text-amber-600'} hover:opacity-80`}
+                                                        title={agreements[resident.uid] ? "Edit Rent Agreement" : "Generate Rent Agreement"}
+                                                    >
+                                                        <FileText size={20} />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => { setSelectedResident(resident); setShowNotificationModal(true); }}
                                                     className="text-amber-600 hover:text-amber-800"
@@ -439,6 +472,7 @@ export const ResidentsPage: React.FC = () => {
                         isOpen={showDetailsModal}
                         resident={selectedResident}
                         onClose={() => setShowDetailsModal(false)}
+                        agreement={agreements[selectedResident.uid]}
                     />
                 )}
 
@@ -452,6 +486,16 @@ export const ResidentsPage: React.FC = () => {
                         initialData={editingResident}
                     />
                 )}
+
+                <RentAgreementModal
+                    isOpen={showAgreementModal.isOpen}
+                    onClose={() => setShowAgreementModal({ ...showAgreementModal, isOpen: false })}
+                    onSuccess={loadInitialData}
+                    flatId={showAgreementModal.flatId}
+                    tenantId={showAgreementModal.tenantId}
+                    ownerId={showAgreementModal.ownerId}
+                    existingAgreement={showAgreementModal.agreement}
+                />
             </div>
         </Layout>
     );
@@ -543,7 +587,8 @@ const ResidentDetailsModal: React.FC<{
     isOpen: boolean;
     resident: User;
     onClose: () => void;
-}> = ({ isOpen, resident, onClose }) => {
+    agreement?: RentAgreement | null;
+}> = ({ isOpen, resident, onClose, agreement }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Resident Details">
             <div className="space-y-4">
@@ -571,6 +616,39 @@ const ResidentDetailsModal: React.FC<{
                         <p className="text-sm text-red-600">Verification pending</p>
                     )}
                 </div>
+                {resident.role === 'tenant' && (
+                    <div className="border-t pt-4">
+                        <p className="text-sm font-medium text-gray-500 uppercase mb-2">Rent Agreement</p>
+                        {agreement ? (
+                            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <p className="text-xs text-gray-500">Rent</p>
+                                        <p className="font-medium">₹{agreement.monthlyRent.toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500">Status</p>
+                                        <p className={`font-medium capitalize ${agreement.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                                            {agreement.status}
+                                        </p>
+                                    </div>
+                                </div>
+                                {agreement.agreementDocument && (
+                                    <a
+                                        href={agreement.agreementDocument}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                                    >
+                                        <ExternalLink size={12} /> View Document
+                                    </a>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400 italic">No agreement found</p>
+                        )}
+                    </div>
+                )}
                 <div className="pt-4">
                     <Button onClick={onClose} className="w-full">Close</Button>
                 </div>
