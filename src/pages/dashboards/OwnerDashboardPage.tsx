@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
     Building2,
-    Users,
     DollarSign,
     AlertCircle,
     TrendingUp,
@@ -9,9 +8,9 @@ import {
     KeyRound
 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { StatsCard, Card, Button } from '@/components/common';
+import { StatsCard, Card } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
-import { useNavigate } from 'react-router-dom';
+
 import {
     PaymentService,
     ComplaintService,
@@ -20,7 +19,6 @@ import {
 
 export const OwnerDashboardPage: React.FC = () => {
     const { user } = useAuthStore();
-    const navigate = useNavigate();
     const [myFlats, setMyFlats] = useState<any[]>([]);
     const [stats, setStats] = useState({
         totalProperties: 0,
@@ -142,15 +140,9 @@ export const OwnerDashboardPage: React.FC = () => {
         <Layout>
             <div className="space-y-6">
                 {/* Page Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
-                        <p className="text-gray-600 mt-1">Manage your properties and tenants</p>
-                    </div>
-                    <Button onClick={() => navigate('/owner/tenants')}>
-                        <Users className="mr-2" size={18} />
-                        Manage Tenants
-                    </Button>
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
+                    <p className="text-gray-600 mt-1">Manage your properties and tenants</p>
                 </div>
 
                 {/* My Properties Section */}
