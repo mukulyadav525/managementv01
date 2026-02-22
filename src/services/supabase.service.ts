@@ -207,9 +207,7 @@ export class SocietyService extends SupabaseService {
             society_id: societyId,
             name: t.name,
             total_floors: t.floors,
-            total_flats: t.floors * t.unitsPerFloor,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            total_flats: t.floors * t.unitsPerFloor
         }));
 
         // Insert buildings
@@ -234,9 +232,7 @@ export class SocietyService extends SupabaseService {
                         floor: floor,
                         bhk_type: '2BHK', // Default
                         area: 1000,       // Default
-                        occupancy_status: 'vacant',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
+                        occupancy_status: 'vacant'
                     });
                 }
             }
