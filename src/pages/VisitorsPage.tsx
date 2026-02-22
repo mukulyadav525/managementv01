@@ -186,14 +186,18 @@ export const VisitorsPage: React.FC = () => {
     if (!user?.societyId) return;
 
     try {
+      setLoading(true);
       await VisitorService.updateVisitor(user.societyId, visitorId, {
         status: 'approved',
         approvedBy: user.uid
       });
       toast.success('Visitor approved');
-      loadVisitors();
+      await loadVisitors();
     } catch (error) {
+      console.error('Error approving visitor:', error);
       toast.error('Failed to approve visitor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -202,14 +206,18 @@ export const VisitorsPage: React.FC = () => {
     if (!window.confirm('Reject this visitor request?')) return;
 
     try {
+      setLoading(true);
       await VisitorService.updateVisitor(user.societyId, visitorId, {
         status: 'rejected',
         approvedBy: user.uid
       });
       toast.success('Visitor rejected');
-      loadVisitors();
+      await loadVisitors();
     } catch (error) {
+      console.error('Error rejecting visitor:', error);
       toast.error('Failed to reject visitor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -217,11 +225,15 @@ export const VisitorsPage: React.FC = () => {
     if (!user?.societyId) return;
 
     try {
+      setLoading(true);
       await VisitorService.checkoutVisitor(user.societyId, visitorId);
       toast.success('Visitor checked out');
-      loadVisitors();
+      await loadVisitors();
     } catch (error) {
+      console.error('Error checking out visitor:', error);
       toast.error('Failed to checkout visitor');
+    } finally {
+      setLoading(false);
     }
   };
 
