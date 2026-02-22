@@ -62,8 +62,9 @@ export const PollsPage: React.FC = () => {
 
         try {
             // Find user's flat for the vote record if needed
-            const flatId = user?.flatIds?.[0] || 'unknown';
-            await PollService.castVote(pollId, optionId, user!.uid, flatId);
+            // Fallback to null if no flat is assigned (e.g. for Admins)
+            const flatId = user?.flatIds?.[0] || null;
+            await PollService.castVote(pollId, optionId, user!.uid, flatId as any);
             toast.success('Your vote has been recorded securely!');
             loadPolls();
         } catch (error) {
