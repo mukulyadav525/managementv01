@@ -1,3 +1,12 @@
+-- Create a function to handle updated_at automatically if it doesn't exist
+CREATE OR REPLACE FUNCTION handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create Society Gates Table
 CREATE TABLE IF NOT EXISTS society_gates (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -19,8 +28,8 @@ CREATE POLICY "member_read_gates" ON public.society_gates
 CREATE POLICY "admin_manage_gates" ON public.society_gates
     FOR ALL USING (public.check_is_admin(society_id));
 
--- Add trigger for updated_at if it doesn't exist for this table
--- (Assuming a generic handle_updated_at function exists as per other migrations)
+-- Add trigger for updated_at
+DROP TRIGGER IF EXISTS set_gates_updated_at ON society_gates;
 CREATE TRIGGER set_gates_updated_at
   BEFORE UPDATE ON society_gates
   FOR EACH ROW
