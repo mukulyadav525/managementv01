@@ -41,6 +41,8 @@ export interface User {
   moveInDate?: string;
   createdAt: string;
   updatedAt: string;
+  staffType?: 'society_staff' | 'domestic_staff';
+  staffRole?: string;
   bankDetails?: {
     accountNumber: string;
     ifscCode: string;

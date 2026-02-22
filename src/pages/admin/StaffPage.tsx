@@ -79,6 +79,7 @@ export const StaffPage: React.FC = () => {
                 phone: formData.phone,
                 role: 'staff',
                 staffType: formData.staffType,
+                staffRole: formData.staffRole,
                 flatIds: formData.staffType === 'domestic_staff' && formData.mappedFlatId ? [formData.mappedFlatId] : [],
                 status: editingStaff ? editingStaff.status : 'active',
                 updatedAt: new Date().toISOString()
@@ -162,12 +163,17 @@ export const StaffPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${staff.staffType === 'society_staff'
-                                                    ? 'bg-blue-100 text-blue-700'
-                                                    : 'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                    {staff.staffType === 'society_staff' ? 'Society Staff' : 'Domestic Staff'}
-                                                </span>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit ${staff.staffType === 'society_staff'
+                                                        ? 'bg-blue-100 text-blue-700'
+                                                        : 'bg-amber-100 text-amber-700'
+                                                        }`}>
+                                                        {staff.staffType === 'society_staff' ? 'Society Staff' : 'Domestic Staff'}
+                                                    </span>
+                                                    <span className="text-sm font-medium text-gray-700 ml-1">
+                                                        {staff.staffRole || 'General Staff'}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 {staff.staffType === 'domestic_staff' ? (
@@ -258,9 +264,23 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         email: initialData?.email || '',
         phone: initialData?.phone || '',
         staffType: initialData?.staffType || 'society_staff',
+        staffRole: initialData?.staffRole || '',
         mappedFlatId: initialData?.flatIds?.[0] || '',
         floor: undefined as number | undefined
     });
+
+    const [isCustomRole, setIsCustomRole] = useState(false);
+
+    const societyRoles = ['Receptionist', 'Maintenance', 'Security', 'Manager', 'Accountant', 'Tech Support'];
+    const domesticRoles = ['Maid', 'Cook', 'Driver', 'Milkman', 'Gardener'];
+
+    const currentRoles = formData.staffType === 'society_staff' ? societyRoles : domesticRoles;
+
+    useEffect(() => {
+        if (initialData?.staffRole && !currentRoles.includes(initialData.staffRole)) {
+            setIsCustomRole(true);
+        }
+    }, [initialData, currentRoles]);
 
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -312,7 +332,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'society_staff', mappedFlatId: '' })}
+                            onClick={() => setFormData({ ...formData, staffType: 'society_staff', staffRole: '', mappedFlatId: '' })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'society_staff'
                                 ? 'bg-primary-50 border-primary-600 ring-1 ring-primary-600'
                                 : 'bg-white border-gray-200 hover:border-primary-400'
@@ -323,7 +343,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'domestic_staff' })}
+                            onClick={() => setFormData({ ...formData, staffType: 'domestic_staff', staffRole: '' })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'domestic_staff'
                                 ? 'bg-amber-50 border-amber-600 ring-1 ring-amber-600'
                                 : 'bg-white border-gray-200 hover:border-amber-400'
@@ -333,6 +353,54 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                             <div className="text-xs text-gray-500">Maids, Milkmen, Private Drivers</div>
                         </button>
                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Specific Role</label>
+                    <div className="flex flex-wrap gap-2">
+                        {currentRoles.map((role) => (
+                            <button
+                                key={role}
+                                type="button"
+                                onClick={() => {
+                                    setFormData({ ...formData, staffRole: role });
+                                    setIsCustomRole(false);
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${formData.staffRole === role && !isCustomRole
+                                    ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
+                                    }`}
+                            >
+                                {role}
+                            </button>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsCustomRole(true);
+                                setFormData({ ...formData, staffRole: '' });
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isCustomRole
+                                ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                                : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
+                                }`}
+                        >
+                            Other / Custom
+                        </button>
+                    </div>
+
+                    {isCustomRole && (
+                        <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                            <input
+                                type="text"
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 text-sm"
+                                placeholder="Type custom role..."
+                                value={formData.staffRole}
+                                onChange={(e) => setFormData({ ...formData, staffRole: e.target.value })}
+                                required
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {formData.staffType === 'domestic_staff' && (
