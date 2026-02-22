@@ -103,6 +103,7 @@ export const AmenityBookingPage: React.FC = () => {
             // Basic validation
             if (end <= start) {
                 toast.error('End time must be after start time');
+                setSubmitting(false);
                 return;
             }
 
@@ -129,9 +130,6 @@ export const AmenityBookingPage: React.FC = () => {
     };
 
     const getCurrentOccupancy = (amenityId: string) => {
-        // Count active/confirmed bookings that overlapping with 'now'
-        // For simplicity and to match user expectation of '99/100', 
-        // let's count all 'confirmed' upcoming bookings for today
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -197,6 +195,15 @@ export const AmenityBookingPage: React.FC = () => {
                         <p className="text-gray-600 mt-1">Book society facilities and manage your reservations</p>
                     </div>
                     <div className="flex items-center gap-3">
+                        {['admin', 'security'].includes(user?.role || '') && (
+                            <Button
+                                variant="ghost"
+                                onClick={() => setView('mine')}
+                                className="text-primary-600 border border-primary-600"
+                            >
+                                My Bookings
+                            </Button>
+                        )}
                         {user?.role === 'admin' && (
                             <Button onClick={() => setShowModal(true)} className="flex items-center gap-2">
                                 <Plus size={20} />
@@ -226,7 +233,7 @@ export const AmenityBookingPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <StatsCard title="Total Amenities" value={amenities.length} icon={Users} color="blue" />
                     <StatsCard title="Available Now" value={amenities.filter(a => a.status === 'available').length} icon={CheckCircle} color="green" />
-                    <StatsCard title="My Upcoming" value={allBookings.filter(b => b.userId === user?.uid).length} icon={Clock} color="purple" />
+                    <StatsCard title="My Upcoming" value={allBookings.filter(b => b.userId === user?.uid && b.status !== 'cancelled').length} icon={Clock} color="purple" />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -352,7 +359,7 @@ export const AmenityBookingPage: React.FC = () => {
                                                             )}
                                                         </h4>
                                                         <div className="flex items-center gap-2">
-                                                            {user?.role === 'admin' ? (
+                                                            {['admin', 'security'].includes(user?.role || '') ? (
                                                                 <select
                                                                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border-none focus:ring-0 cursor-pointer ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : (booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700')}`}
                                                                     value={booking.status}
@@ -368,7 +375,7 @@ export const AmenityBookingPage: React.FC = () => {
                                                                     {booking.status}
                                                                 </span>
                                                             )}
-                                                            {(user?.role === 'admin' || booking.userId === user?.uid) && booking.status === 'confirmed' && (
+                                                            {(['admin', 'security'].includes(user?.role || '') || booking.userId === user?.uid) && booking.status === 'confirmed' && (
                                                                 <button
                                                                     onClick={() => handleCancelBooking(booking.id)}
                                                                     className="p-1 text-gray-400 hover:text-red-600 transition-colors"
@@ -524,6 +531,7 @@ export const AmenityBookingPage: React.FC = () => {
                     </Card>
                 </div>
             )}
+
             {bookingModalAmenity && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-md">
