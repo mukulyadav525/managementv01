@@ -7,6 +7,8 @@ import { UserService, toSnake, SocietyService } from '@/services/supabase.servic
 import { User, Flat } from '@/types';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
+import { generateTempPassword } from '@/utils/password';
+import { Shield } from 'lucide-react';
 
 type StaffRoleType = 'society_staff' | 'domestic_staff';
 
@@ -22,6 +24,7 @@ export const StaffPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingStaff, setEditingStaff] = useState<StaffUser | null>(null);
+    const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string; password: string } | null>(null);
 
     useEffect(() => {
         if (user?.societyId) {
@@ -77,7 +80,7 @@ export const StaffPage: React.FC = () => {
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
-                role: 'staff',
+                role: 'staff' as any,
                 staffType: formData.staffType,
                 staffRole: formData.staffRole,
                 flatIds: formData.staffType === 'domestic_staff' && formData.mappedFlatId ? [formData.mappedFlatId] : [],
@@ -92,10 +95,16 @@ export const StaffPage: React.FC = () => {
                     .eq('uid', staffUid);
                 if (error) throw error;
             } else {
-                const { error } = await supabase
-                    .from('users')
-                    .insert([toSnake({ ...staffData, createdAt: new Date().toISOString() })]);
-                if (error) throw error;
+                // For NEW staff, create an auth account
+                const password = generateTempPassword();
+                const { registerByAdmin } = useAuthStore.getState();
+
+                await registerByAdmin(formData.email, password, {
+                    ...staffData,
+                    societyId: user.societyId
+                });
+
+                setGeneratedCredentials({ email: formData.email, password });
             }
 
             toast.success(editingStaff ? 'Staff updated' : 'Staff member added');
@@ -247,7 +256,76 @@ export const StaffPage: React.FC = () => {
                     />
                 )}
             </div>
+
+            {generatedCredentials && (
+                <CredentialSuccessModal
+                    isOpen={!!generatedCredentials}
+                    onClose={() => setGeneratedCredentials(null)}
+                    credentials={generatedCredentials}
+                />
+            )}
         </Layout>
+    );
+};
+
+const CredentialSuccessModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    credentials: { email: string; password: string };
+}> = ({ isOpen, onClose, credentials }) => {
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Staff Member Registered">
+            <div className="space-y-4">
+                <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                    <p className="text-sm text-green-800">
+                        An authentication account has been created for this staff member. You can now share these credentials with them.
+                    </p>
+                </div>
+
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Email Address</label>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-1">
+                            <span className="font-mono text-sm">{credentials.email}</span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(credentials.email);
+                                    toast.success('Email copied');
+                                }}
+                                className="text-primary-600 hover:text-primary-700 text-xs font-medium"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Temporary Password</label>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-1">
+                            <span className="font-mono text-sm">{credentials.password}</span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(credentials.password);
+                                    toast.success('Password copied');
+                                }}
+                                className="text-primary-600 hover:text-primary-700 text-xs font-medium"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-4 p-3 bg-amber-50 rounded-lg border border-amber-100 flex gap-2">
+                    <Shield size={18} className="text-amber-600 shrink-0" />
+                    <p className="text-xs text-amber-800 italic">
+                        The user can also log in directly via Google using the same email address.
+                    </p>
+                </div>
+
+                <Button onClick={onClose} className="w-full mt-4">Done</Button>
+            </div>
+        </Modal>
     );
 };
 

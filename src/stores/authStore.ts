@@ -17,6 +17,7 @@ interface AuthState {
   needsCompletion: boolean;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  registerByAdmin: (email: string, password: string, userData: Partial<User>) => Promise<void>;
 }
 
 
@@ -344,6 +345,72 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
     } catch (error: any) {
       console.error('authStore: Update password error:', error);
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  registerByAdmin: async (email: string, password: string, userData: Partial<User>) => {
+    try {
+      set({ loading: true, error: null });
+      console.log('authStore: [ADMIN_REG] Starting registration for:', email);
+
+      // Create a temporary client WITHOUT session persistence to avoid logging out the admin
+      const { createClient } = await import('@supabase/supabase-js');
+      const tempSupabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        }
+      );
+
+      // 1. Auth Signup via temp client
+      const { data: authData, error: authError } = await tempSupabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        throw new Error('User creation failed: No user returned.');
+      }
+
+      const uid = authData.user.id;
+      console.log('authStore: [ADMIN_REG] Auth user created with UID:', uid);
+
+      // 2. Create User Profile via main supabase client (which has admin's session)
+      const newUserProfile = {
+        uid: uid,
+        email,
+        name: userData.name || '',
+        phone: userData.phone || '',
+        role: userData.role || 'tenant',
+        societyId: userData.societyId,
+        flatIds: userData.flatIds || [],
+        status: 'active',
+        staffType: userData.staffType,
+        staffRole: userData.staffRole,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const { error: dbError } = await supabase.from('users').insert([toSnake(newUserProfile)]);
+
+      if (dbError) {
+        console.error('authStore: [ADMIN_REG] Profile creation error:', dbError);
+        throw new Error(`Profile creation failed: ${dbError.message}`);
+      }
+
+      console.log('authStore: [ADMIN_REG] Process complete for:', uid);
+      set({ loading: false });
+    } catch (error: any) {
+      console.error('authStore: [ADMIN_REG] Critical error:', error);
       set({ error: error.message, loading: false });
       throw error;
     }

@@ -12,6 +12,7 @@ import { predictFloor } from '@/utils/flat.utils';
 import { RentAgreementModal } from '@/components/tenant/RentAgreementModal';
 import { RentAgreementService } from '@/services/supabase.service';
 import { RentAgreement } from '@/types';
+import { generateTempPassword } from '@/utils/password';
 
 export const ResidentsPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -28,6 +29,7 @@ export const ResidentsPage: React.FC = () => {
     const [selectedResident, setSelectedResident] = useState<User | null>(null);
     const [editingResident, setEditingResident] = useState<User | null>(null);
     const [agreements, setAgreements] = useState<{ [key: string]: RentAgreement }>({}); // tenantId -> agreement
+    const [generatedCredentials, setGeneratedCredentials] = useState<{ email: string; password: string } | null>(null);
 
     useEffect(() => {
         if (user?.societyId) {
@@ -223,7 +225,6 @@ export const ResidentsPage: React.FC = () => {
                 updatedAt: new Date().toISOString()
             };
 
-            // 3. Save User
             if (editingResident) {
                 const { error: userError } = await supabase
                     .from('users')
@@ -231,10 +232,16 @@ export const ResidentsPage: React.FC = () => {
                     .eq('uid', residentUid);
                 if (userError) throw userError;
             } else {
-                const { error: userError } = await supabase
-                    .from('users')
-                    .insert([toSnake({ ...residentData, createdAt: new Date().toISOString() })]);
-                if (userError) throw userError;
+                // For NEW residents, create an auth account
+                const password = generateTempPassword();
+                const { registerByAdmin } = useAuthStore.getState();
+
+                await registerByAdmin(formData.email, password, {
+                    ...residentData,
+                    societyId: user.societyId
+                });
+
+                setGeneratedCredentials({ email: formData.email, password });
             }
 
             if (['owner', 'tenant'].includes(formData.role)) {
@@ -243,7 +250,7 @@ export const ResidentsPage: React.FC = () => {
                     .from('flats')
                     .update({
                         [updateField]: residentUid,
-                        occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied',
+                        occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied', // reverted to 'tenant-occupied' for consistency
                         building_id: formData.buildingId,
                         floor: parseInt(formData.floor)
                     })
@@ -496,8 +503,77 @@ export const ResidentsPage: React.FC = () => {
                     ownerId={showAgreementModal.ownerId}
                     existingAgreement={showAgreementModal.agreement}
                 />
+
+                {generatedCredentials && (
+                    <CredentialSuccessModal
+                        isOpen={!!generatedCredentials}
+                        onClose={() => setGeneratedCredentials(null)}
+                        credentials={generatedCredentials}
+                    />
+                )}
             </div>
         </Layout>
+    );
+};
+
+const CredentialSuccessModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    credentials: { email: string; password: string };
+}> = ({ isOpen, onClose, credentials }) => {
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="User Registered Successfully">
+            <div className="space-y-4">
+                <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+                    <p className="text-sm text-green-800">
+                        An authentication account has been created for this user. You can now share these credentials with them.
+                    </p>
+                </div>
+
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Email Address</label>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-1">
+                            <span className="font-mono text-sm">{credentials.email}</span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(credentials.email);
+                                    toast.success('Email copied');
+                                }}
+                                className="text-primary-600 hover:text-primary-700 text-xs font-medium"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase">Temporary Password</label>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 mt-1">
+                            <span className="font-mono text-sm">{credentials.password}</span>
+                            <button
+                                onClick={() => {
+                                    navigator.clipboard.writeText(credentials.password);
+                                    toast.success('Password copied');
+                                }}
+                                className="text-primary-600 hover:text-primary-700 text-xs font-medium"
+                            >
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-4 p-3 bg-amber-50 rounded-lg border border-amber-100 flex gap-2">
+                    <Shield size={18} className="text-amber-600 shrink-0" />
+                    <p className="text-xs text-amber-800 italic">
+                        The user can also log in directly via Google using the same email address.
+                    </p>
+                </div>
+
+                <Button onClick={onClose} className="w-full mt-4">Done</Button>
+            </div>
+        </Modal>
     );
 };
 
