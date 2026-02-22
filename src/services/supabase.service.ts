@@ -161,6 +161,10 @@ export class UserService extends SupabaseService {
             return res;
         });
     }
+
+    static async getUser(uid: string) {
+        return this.getDocument(`users`, uid);
+    }
 }
 
 // Society-specific services

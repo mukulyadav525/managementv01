@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Input } from '@/components/common';
-import { RentAgreementService } from '@/services/supabase.service';
-import { RentAgreement } from '@/types';
+import { RentAgreementService, SocietyService, UserService, StorageService } from '@/services/supabase.service';
+import { RentAgreement, Society, User, Flat, Building } from '@/types';
+import { generateRentAgreementPDF } from '@/utils/rentAgreementGenerator';
+import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
 
 interface RentAgreementModalProps {
@@ -23,6 +25,7 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
     ownerId,
     existingAgreement
 }) => {
+    const { user } = useAuthStore();
     const [formData, setFormData] = useState({
         startDate: '',
         endDate: '',
@@ -30,8 +33,9 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
         securityDeposit: '',
         agreementDocument: '',
         status: 'active',
-        terms: {}
+        terms: {} as any
     });
+    const [isSystemGenerated, setIsSystemGenerated] = useState(false);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -63,6 +67,49 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
         setLoading(true);
 
         try {
+            let agreementUrl = formData.agreementDocument;
+
+            if (isSystemGenerated) {
+                setLoading(true);
+                // Fetch all necessary data for PDF generation
+                const [society, owner, tenant, flat] = await Promise.all([
+                    SocietyService.getSociety(user!.societyId),
+                    UserService.getUser(ownerId),
+                    UserService.getUser(tenantId),
+                    SocietyService.getFlat(user!.societyId, flatId)
+                ]);
+
+                if (!society || !owner || !tenant || !flat) {
+                    throw new Error('Failed to fetch details for agreement generation');
+                }
+
+                let building: Building | undefined;
+                if ((flat as Flat).buildingId) {
+                    building = await SocietyService.getDocument('buildings', (flat as Flat).buildingId) as Building;
+                }
+
+                const pdfBlob = generateRentAgreementPDF({
+                    society: society as Society,
+                    owner: owner as User,
+                    tenant: tenant as User,
+                    flat: flat as Flat,
+                    building,
+                    agreement: {
+                        startDate: formData.startDate,
+                        endDate: formData.endDate,
+                        monthlyRent: parseFloat(formData.monthlyRent),
+                        securityDeposit: parseFloat(formData.securityDeposit),
+                        terms: formData.terms
+                    }
+                });
+
+                const fileName = `agreement_${tenantId}_${Date.now()}.pdf`;
+                const path = `rent-agreements/${user!.societyId}/${fileName}`;
+                const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                agreementUrl = await StorageService.uploadFile(file, 'documents', path);
+            }
+
             const data = {
                 flatId,
                 tenantId,
@@ -71,7 +118,7 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
                 endDate: formData.endDate || null,
                 monthlyRent: parseFloat(formData.monthlyRent),
                 securityDeposit: parseFloat(formData.securityDeposit),
-                agreementDocument: formData.agreementDocument,
+                agreementDocument: agreementUrl,
                 status: formData.status,
                 terms: formData.terms
             };
@@ -81,7 +128,7 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
                 toast.success('Rent agreement updated successfully');
             } else {
                 await RentAgreementService.createRentAgreement(data);
-                toast.success('Rent agreement created successfully');
+                toast.success('Rent agreement generated & saved');
             }
 
             onSuccess();
@@ -134,14 +181,29 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
                     />
                 </div>
 
-                <Input
-                    label="Agreement Document URL (Google Drive/OneDrive)"
-                    type="url"
-                    value={formData.agreementDocument}
-                    onChange={(e) => setFormData({ ...formData, agreementDocument: e.target.value })}
-                    placeholder="https://drive.google.com/..."
-                    required
-                />
+                <div className="flex items-center gap-2 py-2">
+                    <input
+                        type="checkbox"
+                        id="isSystemGenerated"
+                        checked={isSystemGenerated}
+                        onChange={(e) => setIsSystemGenerated(e.target.checked)}
+                        className="h-4 w-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+                    />
+                    <label htmlFor="isSystemGenerated" className="text-sm font-medium text-gray-900">
+                        System Generated Agreement (Auto-generate PDF)
+                    </label>
+                </div>
+
+                {!isSystemGenerated && (
+                    <Input
+                        label="Agreement Document URL (Google Drive/OneDrive)"
+                        type="url"
+                        value={formData.agreementDocument}
+                        onChange={(e) => setFormData({ ...formData, agreementDocument: e.target.value })}
+                        placeholder="https://drive.google.com/..."
+                        required
+                    />
+                )}
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
