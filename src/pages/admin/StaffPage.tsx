@@ -678,15 +678,14 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                         </p>
                     </div>
                 )}
-            </div>
 
-            <div className="flex gap-3 pt-6 border-t border-gray-100">
-                <Button type="button" variant="secondary" onClick={onClose} className="flex-1 rounded-xl">Cancel</Button>
-                <Button type="submit" className="flex-1 rounded-xl shadow-lg shadow-primary-200">
-                    {initialData ? 'Update Details' : 'Register Staff'}
-                </Button>
-            </div>
-        </form>
-    </Modal >
+                <div className="flex gap-3 pt-6 border-t border-gray-100">
+                    <Button type="button" variant="secondary" onClick={onClose} className="flex-1 rounded-xl">Cancel</Button>
+                    <Button type="submit" className="flex-1 rounded-xl shadow-lg shadow-primary-200">
+                        {initialData ? 'Update Details' : 'Register Staff'}
+                    </Button>
+                </div>
+            </form>
+        </Modal>
     );
 };
