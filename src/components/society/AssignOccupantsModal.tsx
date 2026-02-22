@@ -80,8 +80,22 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
             return toast.error(`A tenant is assigned to floor ${ownerFloorNumber}, where the owner lives. Please remove the tenant first.`);
         }
 
-        const newOccupancyStatus = ownerLivesHere ? 'owner-occupied' : (isHouse && Object.keys(tenantsByFloor).length > 0 ? 'rented' : (selectedTenantId ? 'rented' : 'vacant'));
         const finalTenantId = isHouse ? null : (ownerLivesHere ? null : (selectedTenantId || null)); // For towers
+        // Status logic:
+        // - owner lives here → 'owner-occupied'
+        // - owner assigned but doesn't live here + tenant assigned → 'rented'
+        // - owner assigned but doesn't live here + no tenant → 'owner-occupied' (owned, not vacant)
+        // - no owner → 'vacant'
+        let newOccupancyStatus: string;
+        if (!selectedOwnerId) {
+            newOccupancyStatus = 'vacant';
+        } else if (ownerLivesHere) {
+            newOccupancyStatus = 'owner-occupied';
+        } else if (isHouse) {
+            newOccupancyStatus = Object.keys(tenantsByFloor).length > 0 ? 'rented' : 'owner-occupied';
+        } else {
+            newOccupancyStatus = finalTenantId ? 'rented' : 'owner-occupied';
+        }
 
         setLoading(true);
         try {
