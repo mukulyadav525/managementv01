@@ -211,50 +211,54 @@ export const StaffPage: React.FC = () => {
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex flex-col gap-1.5 max-w-[200px]">
-                                                        {/* Home Residence (If applicable) */}
+                                                    <div className="flex flex-col gap-2 max-w-[250px]">
+                                                        {/* Home Residence (If staff member lives in society) */}
                                                         {staff.residesInSociety && (
-                                                            <div className="flex items-center gap-1.5 text-[10px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 w-fit">
-                                                                <Home size={10} />
-                                                                <span className="font-bold uppercase tracking-wider">Lives Here:</span>
-                                                                <span>
-                                                                    {buildings.find(b => b.id === staff.homeBuildingId)?.name || 'Bldg'} - {flats.find(f => f.id === staff.homeFlatId)?.flatNumber || 'Flat'}
-                                                                </span>
+                                                            <div className="flex flex-col gap-1 p-2 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                                                                <div className="flex items-center gap-1.5 text-[10px] text-indigo-700 font-bold uppercase tracking-wider">
+                                                                    <Home size={10} />
+                                                                    <span>Home Residence</span>
+                                                                </div>
+                                                                <div className="text-xs text-indigo-900 font-medium pl-3.5">
+                                                                    {buildings.find(b => b.id === (staff.homeBuildingId || (staff as any).home_building_id))?.name || 'Building'} - {flats.find(f => f.id === (staff.homeFlatId || (staff as any).home_flat_id))?.flatNumber || 'Flat'}
+                                                                </div>
                                                             </div>
                                                         )}
 
-                                                        {/* Buildings Mapping */}
-                                                        {staff.buildingIds && staff.buildingIds.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1 items-center">
-                                                                <MapPin size={12} className="text-primary-500" />
-                                                                {staff.buildingIds.map(bId => (
-                                                                    <span key={bId} className="text-[10px] bg-primary-50 text-primary-700 px-1.5 py-0.5 rounded border border-primary-100">
-                                                                        {buildings.find(b => b.id === bId)?.name || 'Building'}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                        {/* Work Assignments Grouped by Building */}
+                                                        <div className="space-y-1.5">
+                                                            {staff.buildingIds && staff.buildingIds.length > 0 ? (
+                                                                staff.buildingIds.map(bId => {
+                                                                    const building = buildings.find(b => b.id === bId);
+                                                                    const buildingFlats = staff.staffType === 'domestic_staff'
+                                                                        ? (staff.flatIds || []).filter(fId => {
+                                                                            const flat = flats.find(f => f.id === fId);
+                                                                            return flat?.buildingId === bId;
+                                                                        })
+                                                                        : [];
 
-                                                        {/* Flats Mapping (Only for Domestic) */}
-                                                        {staff.staffType === 'domestic_staff' && staff.flatIds && staff.flatIds.length > 0 ? (
-                                                            <div className="flex flex-wrap gap-1 items-center">
-                                                                <Home size={12} className="text-amber-500" />
-                                                                {staff.flatIds.map(fId => {
-                                                                    const flat = flats.find(f => f.id === fId);
                                                                     return (
-                                                                        <span key={fId} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100">
-                                                                            {flat?.flatNumber || 'Flat'}
-                                                                        </span>
+                                                                        <div key={bId} className="flex flex-col gap-1 border-l-2 border-primary-100 pl-2 py-0.5">
+                                                                            <div className="flex items-center gap-1 text-xs font-bold text-gray-700">
+                                                                                <MapPin size={12} className="text-primary-500" />
+                                                                                {building?.name || 'Building'}
+                                                                            </div>
+                                                                            {staff.staffType === 'domestic_staff' && buildingFlats.length > 0 && (
+                                                                                <div className="flex flex-wrap gap-1">
+                                                                                    {buildingFlats.map(fId => (
+                                                                                        <span key={fId} className="text-[10px] text-primary-600 bg-white border border-primary-100 px-1.5 py-0.5 rounded">
+                                                                                            {flats.find(f => f.id === fId)?.flatNumber || 'Flat'}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
                                                                     );
-                                                                })}
-                                                            </div>
-                                                        ) : staff.staffType === 'domestic_staff' && (
-                                                            <span className="text-red-400 text-xs italic">No flats mapped</span>
-                                                        )}
-
-                                                        {(!staff.buildingIds || staff.buildingIds.length === 0) && (!staff.flatIds || staff.flatIds.length === 0) && (
-                                                            <span className="text-gray-400 text-xs italic">Unassigned</span>
-                                                        )}
+                                                                })
+                                                            ) : (
+                                                                !staff.residesInSociety && <span className="text-gray-400 text-xs italic">Unassigned</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </td>
