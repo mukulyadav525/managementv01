@@ -3,7 +3,6 @@ import { Calendar, Clock, MapPin, CheckCircle, AlertCircle, Plus, ChevronRight, 
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 
 import {
@@ -17,7 +16,6 @@ export const AmenityBookingPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [amenities, setAmenities] = useState<Amenity[]>([]);
     const [allBookings, setAllBookings] = useState<Booking[]>([]);
-    const [usersList, setUsersList] = useState<any[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [bookingModalAmenity, setBookingModalAmenity] = useState<Amenity | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -32,14 +30,12 @@ export const AmenityBookingPage: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [amenitiesData, bookingsData, usersData] = await Promise.all([
+            const [amenitiesData, bookingsData] = await Promise.all([
                 AmenityService.getAmenities(user!.societyId),
-                AmenityService.getBookings(user!.societyId),
-                supabase.from('users').select('uid, name').eq('society_id', user!.societyId)
+                AmenityService.getBookings(user!.societyId)
             ]);
             setAmenities(amenitiesData as Amenity[]);
             setAllBookings(bookingsData as any[]);
-            if (usersData.data) setUsersList(usersData.data);
         } catch (error) {
             toast.error('Failed to load amenities');
         } finally {
@@ -168,7 +164,7 @@ export const AmenityBookingPage: React.FC = () => {
                         )}
                         <Button variant="secondary" className="flex items-center gap-2">
                             <Calendar size={18} />
-                            All Bookings
+                            My Bookings
                         </Button>
                     </div>
                 </div>
@@ -177,7 +173,7 @@ export const AmenityBookingPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <StatsCard title="Total Amenities" value={amenities.length} icon={Users} color="blue" />
                     <StatsCard title="Available Now" value={amenities.filter(a => a.status === 'available').length} icon={CheckCircle} color="green" />
-                    <StatsCard title="Upcoming Bookings" value={allBookings.length} icon={Clock} color="purple" />
+                    <StatsCard title="My Upcoming" value={allBookings.filter(b => b.userId === user?.uid).length} icon={Clock} color="purple" />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -269,20 +265,20 @@ export const AmenityBookingPage: React.FC = () => {
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                             <Clock className="text-primary-600" size={24} />
-                            Society Bookings
+                            My Bookings
                         </h2>
                         <Card className="h-full">
-                            {allBookings.length === 0 ? (
+                            {allBookings.filter(b => b.userId === user?.uid).length === 0 ? (
                                 <div className="p-10 text-center flex flex-col items-center justify-center">
                                     <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mb-4">
                                         <Info className="text-gray-300" size={24} />
                                     </div>
-                                    <h4 className="font-bold text-gray-700">No society bookings</h4>
-                                    <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">No facility reservations found for this society.</p>
+                                    <h4 className="font-bold text-gray-700">No personal bookings</h4>
+                                    <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">Your facility reservations will appear here. Start by selecting an amenity.</p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-gray-50">
-                                    {allBookings.map(booking => (
+                                    {allBookings.filter(b => b.userId === user?.uid).map(booking => (
                                         <div key={booking.id} className="p-4 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-start gap-4">
                                                 <div className="bg-primary-50 p-3 rounded-2xl text-primary-600">
@@ -307,10 +303,6 @@ export const AmenityBookingPage: React.FC = () => {
                                                                 {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
                                                                 {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5 font-medium text-primary-600">
-                                                            <Users size={12} />
-                                                            <span>Booked by: {usersList.find(u => u.uid === booking.userId)?.name || 'Unknown User'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
