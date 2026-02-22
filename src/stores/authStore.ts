@@ -307,7 +307,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         // Only fetch if session changed or not loaded
         const current = useAuthStore.getState();
         if (!current.user || current.user.uid !== session.user.id) {
-          await syncProfile(session.user.id);
+          // Prevent Supabase auth listener deadlock by pushing to next tick
+          setTimeout(() => {
+            syncProfile(session.user.id);
+          }, 0);
         } else {
           set({ loading: false });
           clearTimeout(safetyTimeout);
