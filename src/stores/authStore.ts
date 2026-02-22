@@ -383,7 +383,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.log('authStore: [ADMIN_REG] Auth user created with UID:', uid);
 
       // 2. Create User Profile via main supabase client (which has admin's session)
-      const newUserProfile = {
+      const newUserProfile: any = {
         uid: uid,
         email,
         name: userData.name || '',
@@ -392,11 +392,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         societyId: userData.societyId,
         flatIds: userData.flatIds || [],
         status: 'active',
-        staffType: userData.staffType,
-        staffRole: userData.staffRole,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+
+      // Only add optional staff fields if they exist to avoid schema errors
+      if (userData.staffType) newUserProfile.staffType = userData.staffType;
+      if (userData.staffRole) newUserProfile.staffRole = userData.staffRole;
 
       const { error: dbError } = await supabase.from('users').insert([toSnake(newUserProfile)]);
 

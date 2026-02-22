@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   society_id TEXT,
   flat_ids TEXT[], -- Array of flat identifiers
   status TEXT DEFAULT 'active',
+  staff_type TEXT, -- 'society_staff', 'domestic_staff'
+  staff_role TEXT, -- 'security', 'cleaner', 'maintenance', etc.
   kyc_documents JSONB DEFAULT '{}', -- Store URLs for Aadhar, etc.
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
