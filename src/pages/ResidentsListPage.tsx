@@ -217,21 +217,29 @@ export const ResidentsListPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">
-                                                {resident.flatIds?.length ? (
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {resident.flatIds.map(flatId => {
-                                                            const flat = flats.find(f => f.id === flatId);
-                                                            const building = buildings.find(b => b.id === flat?.buildingId);
-                                                            return flat ? (
-                                                                <span key={flatId} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs">
-                                                                    {building ? `${building.name} - ` : ''}{flat.flatNumber}
-                                                                </span>
-                                                            ) : null;
-                                                        })}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-400">No flats mapped</span>
-                                                )}
+                                                {(() => {
+                                                    const assignedFlats = flats.filter(f =>
+                                                        (resident.flatIds?.includes(f.id)) ||
+                                                        (f.ownerId === resident.uid || f.tenantId === resident.uid)
+                                                    );
+
+                                                    if (assignedFlats.length === 0) {
+                                                        return <span className="text-gray-400">No units mapped</span>;
+                                                    }
+
+                                                    return (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {assignedFlats.map(flat => {
+                                                                const building = buildings.find(b => b.id === flat.buildingId);
+                                                                return (
+                                                                    <span key={flat.id} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs">
+                                                                        {building ? `${building.name} - ` : ''}{flat.flatNumber}
+                                                                    </span>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <button className="text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors bg-primary-50 px-3 py-1.5 rounded-lg">
