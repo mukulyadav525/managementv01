@@ -171,15 +171,25 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     console.log('authStore: [completeProfile] Creating profile for UID:', uid);
 
-    // Upsert profile based on uid to avoid race conditions and duplicate key errors
-    const { error: dbError } = await supabase.from('users').upsert(toSnake(newUser), {
-      onConflict: 'email', // The unique constraint is on email
-      ignoreDuplicates: false
-    });
+    // 2a. Attempt default insert
+    const { error: insertError } = await supabase.from('users').insert([toSnake(newUser)]);
 
-    if (dbError) {
-      console.error('authStore: [completeProfile] Profile creation error:', dbError);
-      throw new Error(`Profile creation failed: ${dbError.message}`);
+    if (insertError) {
+      // 23505 is PostgreSQL's unique_violation error code.
+      // If the email is already registered (e.g. via an automated trigger or previous failed partial signup)
+      // we catch it and fallback to an UPDATE rather than hard crashing.
+      if (insertError.code === '23505') {
+        console.warn('authStore: [completeProfile] Profile exists (duplicate key). Falling back to update.');
+        const { error: updateError } = await supabase.from('users').update(toSnake(newUser)).eq('uid', uid);
+
+        if (updateError) {
+          console.error('authStore: [completeProfile] Profile update fallback error:', updateError);
+          throw new Error(`Profile creation failed during fallback update: ${updateError.message}`);
+        }
+      } else {
+        console.error('authStore: [completeProfile] Profile creation error:', insertError);
+        throw new Error(`Profile creation failed: ${insertError.message}`);
+      }
     }
 
     // 3. Admin Flow: Society Creation
