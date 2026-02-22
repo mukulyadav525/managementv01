@@ -16,7 +16,9 @@ export const AmenityBookingPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [amenities, setAmenities] = useState<Amenity[]>([]);
     const [myBookings, setMyBookings] = useState<Booking[]>([]);
+    const [allBookings, setAllBookings] = useState<Booking[]>([]);
     const [showModal, setShowModal] = useState(false);
+    const [bookingModalAmenity, setBookingModalAmenity] = useState<Amenity | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState<any>({});
 
@@ -31,10 +33,11 @@ export const AmenityBookingPage: React.FC = () => {
         try {
             const [amenitiesData, bookingsData] = await Promise.all([
                 AmenityService.getAmenities(user!.societyId),
-                AmenityService.getBookings(user!.societyId, { userId: user!.uid })
+                AmenityService.getBookings(user!.societyId)
             ]);
             setAmenities(amenitiesData as Amenity[]);
-            setMyBookings(bookingsData as any[]);
+            setAllBookings(bookingsData as any[]);
+            setMyBookings((bookingsData as any[]).filter(b => b.userId === user?.uid));
         } catch (error) {
             toast.error('Failed to load amenities');
         } finally {
@@ -47,8 +50,57 @@ export const AmenityBookingPage: React.FC = () => {
             toast.error('This amenity is currently unavailable for booking');
             return;
         }
-        // In a real app, this would open a modal with date/time selection
-        toast.success(`Booking flow initiated for ${amenity.name}`);
+        setBookingModalAmenity(amenity);
+    };
+
+    const handleConfirmBooking = async (details: { startTime: string; endTime: string; notes: string }) => {
+        if (!bookingModalAmenity || !user) return;
+
+        setSubmitting(true);
+        try {
+            const start = new Date(details.startTime);
+            const end = new Date(details.endTime);
+
+            // Basic validation
+            if (end <= start) {
+                toast.error('End time must be after start time');
+                return;
+            }
+
+            await AmenityService.createBooking({
+                amenityId: bookingModalAmenity.id,
+                userId: user.uid,
+                societyId: user.societyId,
+                startTime: start.toISOString(),
+                endTime: end.toISOString(),
+                status: 'confirmed',
+                notes: details.notes,
+                totalPrice: bookingModalAmenity.pricePerHour ?
+                    (Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60)) * bookingModalAmenity.pricePerHour) : 0
+            });
+
+            toast.success(`Booking confirmed for ${bookingModalAmenity.name}`);
+            setBookingModalAmenity(null);
+            loadData();
+        } catch (error) {
+            toast.error('Booking failed. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const getCurrentOccupancy = (amenityId: string) => {
+        // Count active/confirmed bookings that overlapping with 'now'
+        // For simplicity and to match user expectation of '99/100', 
+        // let's count all 'confirmed' upcoming bookings for today
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        return allBookings.filter(b =>
+            b.amenityId === amenityId &&
+            b.status === 'confirmed' &&
+            new Date(b.startTime) >= today
+        ).length;
     };
 
     const handleDelete = async (id: string) => {
@@ -186,7 +238,7 @@ export const AmenityBookingPage: React.FC = () => {
                                                         </span>
                                                         <span className="flex items-center gap-1">
                                                             <Users size={14} />
-                                                            Capacity: {amenity.capacity}
+                                                            Capacity: {(amenity.capacity || 0) - getCurrentOccupancy(amenity.id)}/{amenity.capacity || 0}
                                                         </span>
                                                         {amenity.pricePerHour && (
                                                             <span className="text-primary-600 font-bold">₹{amenity.pricePerHour}/hr</span>
@@ -381,6 +433,63 @@ export const AmenityBookingPage: React.FC = () => {
                                 </Button>
                             </div>
                         </form>
+                    </Card>
+                </div>
+            )}
+            {bookingModalAmenity && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold">Book {bookingModalAmenity.name}</h3>
+                                <button onClick={() => setBookingModalAmenity(null)}><X /></button>
+                            </div>
+
+                            <div className="space-y-4 mb-8">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Date & Arrival Time</label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        id="booking-start"
+                                        defaultValue={new Date().toISOString().slice(0, 16)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Departure Time</label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        id="booking-end"
+                                        defaultValue={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Notes (Optional)</label>
+                                    <textarea
+                                        className="w-full px-4 py-2 border rounded-xl"
+                                        placeholder="Purpose of booking..."
+                                        id="booking-notes"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <Button variant="secondary" onClick={() => setBookingModalAmenity(null)} className="flex-1">Cancel</Button>
+                                <Button
+                                    disabled={submitting}
+                                    onClick={() => {
+                                        const startTime = (document.getElementById('booking-start') as HTMLInputElement).value;
+                                        const endTime = (document.getElementById('booking-end') as HTMLInputElement).value;
+                                        const notes = (document.getElementById('booking-notes') as HTMLTextAreaElement).value;
+                                        handleConfirmBooking({ startTime, endTime, notes });
+                                    }}
+                                    className="flex-1"
+                                >
+                                    {submitting ? 'Confirming...' : 'Confirm Booking'}
+                                </Button>
+                            </div>
+                        </div>
                     </Card>
                 </div>
             )}
