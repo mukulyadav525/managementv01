@@ -88,10 +88,12 @@ export const DocumentsPage: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-900">Document Vault</h1>
                         <p className="text-gray-600 mt-1">Access society documents and manage your personal files</p>
                     </div>
-                    <Button onClick={handleUpload} className="flex items-center gap-2">
-                        <Plus size={20} />
-                        Upload Document
-                    </Button>
+                    {(activeTab === 'personal' || ['admin', 'security'].includes(user?.role || '')) && (
+                        <Button onClick={handleUpload} className="flex items-center gap-2">
+                            <Plus size={20} />
+                            Upload Document
+                        </Button>
+                    )}
                 </div>
 
                 {/* Stats */}
