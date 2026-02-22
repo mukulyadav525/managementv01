@@ -14,13 +14,14 @@ type StaffRoleType = 'society_staff' | 'domestic_staff';
 
 interface StaffUser extends User {
     staffType?: StaffRoleType;
-    mappedFlatId?: string;
+    buildingId?: string;
 }
 
 export const StaffPage: React.FC = () => {
     const { user } = useAuthStore();
     const [staffList, setStaffList] = useState<StaffUser[]>([]);
     const [flats, setFlats] = useState<Flat[]>([]);
+    const [buildings, setBuildings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingStaff, setEditingStaff] = useState<StaffUser | null>(null);
@@ -36,15 +37,17 @@ export const StaffPage: React.FC = () => {
         if (!user?.societyId) return;
         try {
             setLoading(true);
-            const [usersData, flatsData] = await Promise.all([
+            const [usersData, flatsData, buildingsRes] = await Promise.all([
                 UserService.getUsers(user.societyId),
-                SocietyService.getFlats(user.societyId)
+                SocietyService.getFlats(user.societyId),
+                supabase.from('buildings').select('id, name').eq('society_id', user.societyId)
             ]);
 
             // Filter only staff members
             const staff = (usersData as StaffUser[]).filter(u => u.role === 'staff' || u.role === 'security');
             setStaffList(staff);
             setFlats(flatsData as Flat[]);
+            setBuildings(buildingsRes.data || []);
         } catch (error) {
             toast.error('Failed to load staff data');
         } finally {
@@ -174,30 +177,50 @@ export const StaffPage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit ${staff.staffType === 'society_staff'
-                                                        ? 'bg-blue-100 text-blue-700'
-                                                        : 'bg-amber-100 text-amber-700'
-                                                        }`}>
-                                                        {staff.staffType === 'society_staff' ? 'Society Staff' : 'Domestic Staff'}
-                                                    </span>
+                                                    {staff.role === 'security' ? (
+                                                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit bg-green-100 text-green-700 border border-green-200">
+                                                            Security Guard
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit ${staff.staffType === 'society_staff'
+                                                            ? 'bg-blue-100 text-blue-700'
+                                                            : 'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                            {staff.staffType === 'society_staff' ? 'Society Staff' : 'Domestic Staff'}
+                                                        </span>
+                                                    )}
                                                     <span className="text-sm font-medium text-gray-700 ml-1">
-                                                        {staff.staffRole || 'General Staff'}
+                                                        {staff.role === 'security' ? 'Security' : (staff.staffRole || 'General Staff')}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {staff.staffType === 'domestic_staff' ? (
+                                                {staff.role === 'security' ? (
+                                                    <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                                                        <MapPin size={14} className="text-primary-500" />
+                                                        {staff.buildingId ? (
+                                                            <span className="font-medium text-gray-900">
+                                                                {buildings.find(b => b.id === staff.buildingId)?.name || 'Loading building...'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-red-400 italic">No building assigned</span>
+                                                        )}
+                                                    </div>
+                                                ) : staff.staffType === 'domestic_staff' || (staff.flatIds && staff.flatIds.length > 0) ? (
                                                     <div className="flex items-center gap-1.5 text-sm text-gray-700">
                                                         <Home size={14} className="text-gray-400" />
-                                                        {staff.flatIds?.[0] ? (() => {
-                                                            const flat = flats.find(f => f.id === staff.flatIds![0]);
-                                                            return (
-                                                                <span>
-                                                                    Flat {flat?.flatNumber || staff.flatIds[0]}
-                                                                    {flat?.floor && <span className="text-xs text-gray-500 ml-1">(Floor {flat.floor})</span>}
-                                                                </span>
-                                                            );
-                                                        })() : (
+                                                        {staff.flatIds && staff.flatIds.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {staff.flatIds.map(fId => {
+                                                                    const flat = flats.find(f => f.id === fId);
+                                                                    return (
+                                                                        <span key={fId} className="bg-gray-100 px-2 py-0.5 rounded text-xs">
+                                                                            {flat?.flatNumber || 'Flat'}
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        ) : (
                                                             <span className="text-red-400 italic">Not Mapped</span>
                                                         )}
                                                     </div>
@@ -221,10 +244,7 @@ export const StaffPage: React.FC = () => {
                                             <td className="px-6 py-4 text-right space-x-2">
                                                 <button
                                                     onClick={() => {
-                                                        setEditingStaff({
-                                                            ...staff,
-                                                            mappedFlatId: staff.flatIds?.[0] || ''
-                                                        } as any);
+                                                        setEditingStaff(staff);
                                                         setShowModal(true);
                                                     }}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
