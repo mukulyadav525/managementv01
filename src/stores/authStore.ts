@@ -50,7 +50,41 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         if (userError) {
           if (userError.code === 'PGRST116') {
-            console.log('authStore: User authenticated but no profile found. Needs completion.');
+            // No profile row found — this is an admin-created user logging in for first time.
+            // Their profile data was saved in auth user_metadata. Auto-create it now.
+            console.log('authStore: No profile found — attempting auto-create from auth metadata.');
+            const meta = authData.user.user_metadata || {};
+            const autoProfile: any = {
+              uid: authData.user.id,
+              email: authData.user.email,
+              name: meta.name || authData.user.email?.split('@')[0] || 'User',
+              phone: meta.phone || '',
+              role: meta.role || 'tenant',
+              society_id: meta.society_id || null,
+              flat_ids: meta.flat_ids || [],
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            if (meta.staff_type) autoProfile.staff_type = meta.staff_type;
+            if (meta.staff_role) autoProfile.staff_role = meta.staff_role;
+
+            const { error: createErr } = await supabase.from('users').insert([autoProfile]);
+            if (createErr) {
+              console.error('authStore: Auto-profile creation failed:', createErr.message);
+              set({ user: null, loading: false, needsCompletion: true });
+              return;
+            }
+
+            // Retry fetching the now-created profile
+            const { data: retryData } = await supabase
+              .from('users').select('*').eq('uid', authData.user.id).single();
+            if (retryData) {
+              const user = toCamel(retryData) as User;
+              set({ user, loading: false, needsCompletion: false });
+              return;
+            }
+
             set({ user: null, loading: false, needsCompletion: true });
             return;
           }
@@ -400,10 +434,22 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       );
 
-      // 1. Auth Signup via temp client
+      // 1. Auth Signup via temp client, embedding profile data in user_metadata so
+      //    we can auto-create the profile row on the user's first login (own session bypasses RLS)
+      const profileMeta = {
+        name: userData.name || '',
+        phone: userData.phone || '',
+        role: userData.role || 'tenant',
+        society_id: userData.societyId,
+        flat_ids: userData.flatIds || [],
+        status: 'active',
+        staff_type: userData.staffType || null,
+        staff_role: userData.staffRole || null,
+      };
       const { data: authData, error: authError } = await tempSupabase.auth.signUp({
         email,
         password,
+        options: { data: profileMeta }
       });
 
       if (authError) throw authError;

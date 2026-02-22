@@ -38,10 +38,15 @@ export const LoginPage: React.FC = () => {
         const dashboardPath = getDashboardPath(currentUser.role);
         navigate(dashboardPath);
       } else {
-        console.warn('LoginPage: No user profile found after sign in');
-        toast.error('Login successful, but profile not found. Please contact support.');
-        // Don't navigate to /dashboard because DashboardRedirect will just send them back or to tenant
-        // Stay on login or redirect to a help page
+        // User authenticated but no profile row exists (happens when admin creates a user
+        // and the profile insert fails due to RLS). Redirect to profile completion page.
+        const needsCompletion = useAuthStore.getState().needsCompletion;
+        if (needsCompletion) {
+          toast('Your account needs setup. Please complete your profile.', { icon: 'ℹ️', duration: 5000 });
+          navigate('/complete-profile');
+        } else {
+          toast.error('Login successful, but profile not found. Please contact support.');
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to login');
