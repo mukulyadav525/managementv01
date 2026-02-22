@@ -44,6 +44,9 @@ export interface User {
   updatedAt: string;
   staffType?: 'society_staff' | 'domestic_staff';
   staffRole?: string;
+  residesInSociety?: boolean;
+  homeBuildingId?: string;
+  homeFlatId?: string;
   bankDetails?: {
     accountNumber: string;
     ifscCode: string;

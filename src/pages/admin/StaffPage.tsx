@@ -16,6 +16,9 @@ interface StaffUser extends User {
     staffType?: StaffRoleType;
     buildingId?: string;
     buildingIds?: string[];
+    residesInSociety?: boolean;
+    homeBuildingId?: string;
+    homeFlatId?: string;
 }
 
 export const StaffPage: React.FC = () => {
@@ -91,6 +94,9 @@ export const StaffPage: React.FC = () => {
                 buildingId: formData.staffType === 'society_staff' ? (formData.selectedBuildingIds[0] || null) : (formData.staffType === 'domestic_staff' ? (formData.selectedBuildingIds[0] || null) : null),
                 buildingIds: formData.selectedBuildingIds || [],
                 status: editingStaff ? editingStaff.status : 'active',
+                residesInSociety: formData.residesInSociety,
+                homeBuildingId: formData.residesInSociety ? formData.homeBuildingId : null,
+                homeFlatId: formData.residesInSociety ? formData.homeFlatId : null,
                 updatedAt: new Date().toISOString()
             };
 
@@ -206,6 +212,17 @@ export const StaffPage: React.FC = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="flex flex-col gap-1.5 max-w-[200px]">
+                                                        {/* Home Residence (If applicable) */}
+                                                        {staff.residesInSociety && (
+                                                            <div className="flex items-center gap-1.5 text-[10px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded border border-indigo-100 w-fit">
+                                                                <Home size={10} />
+                                                                <span className="font-bold uppercase tracking-wider">Lives Here:</span>
+                                                                <span>
+                                                                    {buildings.find(b => b.id === staff.homeBuildingId)?.name || 'Bldg'} - {flats.find(f => f.id === staff.homeFlatId)?.flatNumber || 'Flat'}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
                                                         {/* Buildings Mapping */}
                                                         {staff.buildingIds && staff.buildingIds.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 items-center">
@@ -376,6 +393,9 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         staffRole: initialData?.staffRole || '',
         selectedBuildingIds: initialData?.buildingIds || (initialData?.buildingId ? [initialData.buildingId] : []),
         selectedFlatIds: initialData?.flatIds || [] as string[],
+        residesInSociety: initialData?.residesInSociety || false,
+        homeBuildingId: initialData?.homeBuildingId || '',
+        homeFlatId: initialData?.homeFlatId || '',
         activeBuildingTab: '' // For Domestic Staff: which building's flats we are showing
     });
 
@@ -526,6 +546,65 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                             <div className="text-xs text-gray-500">Maids, Cooks, Drivers</div>
                         </button>
                     </div>
+                </div>
+
+                {/* Resident Toggle */}
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Home size={18} className="text-primary-600" />
+                            <div>
+                                <div className="text-sm font-bold text-gray-900">Resides in Society?</div>
+                                <div className="text-xs text-gray-500">Check this if the staff member lives on-site</div>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={formData.residesInSociety}
+                                onChange={(e) => setFormData({ ...formData, residesInSociety: e.target.checked })}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                        </label>
+                    </div>
+
+                    {formData.residesInSociety && (
+                        <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Home Building</label>
+                                <select
+                                    value={formData.homeBuildingId}
+                                    onChange={(e) => setFormData({ ...formData, homeBuildingId: e.target.value, homeFlatId: '' })}
+                                    className="w-full px-3 py-1.5 border rounded-lg text-sm bg-white"
+                                    required={formData.residesInSociety}
+                                >
+                                    <option value="">Select Building</option>
+                                    {buildings.map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Home Flat</label>
+                                <select
+                                    value={formData.homeFlatId}
+                                    onChange={(e) => setFormData({ ...formData, homeFlatId: e.target.value })}
+                                    className="w-full px-3 py-1.5 border rounded-lg text-sm bg-white"
+                                    required={formData.residesInSociety}
+                                    disabled={!formData.homeBuildingId}
+                                >
+                                    <option value="">Select Flat</option>
+                                    {allFlats
+                                        .filter(f => f.building_id === formData.homeBuildingId)
+                                        .map(f => (
+                                            <option key={f.id} value={f.id}>{f.flat_number}</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {formData.staffType !== 'security' && (
