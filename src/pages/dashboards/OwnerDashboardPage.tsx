@@ -141,7 +141,7 @@ export const OwnerDashboardPage: React.FC = () => {
             <div className="space-y-6">
                 {/* Page Header */}
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Owner Dashboard</h1>
                     <p className="text-gray-600 mt-1">Manage your properties and tenants</p>
                 </div>
 

@@ -311,7 +311,7 @@ export const PaymentsPage: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
             <p className="text-gray-600 mt-1">Manage rent and maintenance payments</p>
           </div>
           <div className="flex gap-2">

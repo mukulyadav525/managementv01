@@ -79,7 +79,7 @@ export const SettingsPage: React.FC = () => {
         <Layout>
             <div className="space-y-6 max-w-4xl mx-auto">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Society Settings</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Society Settings</h1>
                     <p className="text-gray-600 mt-1">Configure your society's global parameters and contact info</p>
                 </div>
 

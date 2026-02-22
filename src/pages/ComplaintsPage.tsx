@@ -179,7 +179,7 @@ export const ComplaintsPage: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Complaints</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Complaints</h1>
             <p className="text-gray-600 mt-1">Raise and track maintenance issues</p>
           </div>
           {user?.role !== 'staff' && (

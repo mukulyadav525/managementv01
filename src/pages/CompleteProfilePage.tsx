@@ -98,7 +98,7 @@ export const CompleteProfilePage: React.FC = () => {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
                         <UserCircle className="text-white" size={32} />
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900">Complete Profile</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Complete Profile</h1>
                     <p className="text-gray-600 mt-2">We need a few more details to get you started.</p>
                 </div>
 

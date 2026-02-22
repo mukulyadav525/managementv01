@@ -299,7 +299,7 @@ export const VisitorsPage: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Visitor Management</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Visitor Management</h1>
             <p className="text-gray-600 mt-1">Track entries and issue visitor gate passes</p>
           </div>
           <Button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 shadow-lg shadow-primary-100">

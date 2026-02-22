@@ -135,7 +135,7 @@ export const StaffPage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
                         <p className="text-gray-600 mt-1">Manage society and domestic staff members</p>
                     </div>
                     <Button onClick={() => { setEditingStaff(null); setShowModal(true); }}>
