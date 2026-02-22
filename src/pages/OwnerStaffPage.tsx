@@ -21,6 +21,8 @@ export const OwnerStaffPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingStaff, setEditingStaff] = useState<StaffUser | null>(null);
+    const [helpType, setHelpType] = useState('Maid');
+    const [customHelpType, setCustomHelpType] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState<{ isOpen: boolean; staff: StaffUser | null }>({ isOpen: false, staff: null });
     const [salaryHistory, setSalaryHistory] = useState<{ [key: string]: SalaryPayment[] }>({});
 
@@ -125,6 +127,7 @@ export const OwnerStaffPage: React.FC = () => {
                 phone: formData.phone,
                 role: 'staff',
                 staffType: 'domestic_staff',
+                staffRole: formData.staffRole,
                 flatIds: [formData.mappedFlatId],
                 status: editingStaff ? editingStaff.status : 'active',
                 updatedAt: new Date().toISOString()
@@ -189,7 +192,12 @@ export const OwnerStaffPage: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-900">My Staff</h1>
                         <p className="text-gray-600 mt-1">Manage domestic help and pay salaries</p>
                     </div>
-                    <Button onClick={() => { setEditingStaff(null); setShowModal(true); }}>
+                    <Button onClick={() => {
+                        setEditingStaff(null);
+                        setHelpType('Maid');
+                        setCustomHelpType('');
+                        setShowModal(true);
+                    }}>
                         <UserPlus size={20} className="mr-2" />
                         Add Domestic Help
                     </Button>
@@ -232,7 +240,10 @@ export const OwnerStaffPage: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                                                <div className="flex items-center gap-1.5 text-sm text-gray-700 font-medium">
+                                                    {staff.staffRole || 'Staff Member'}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-1">
                                                     <Home size={14} className="text-gray-400" />
                                                     <span>Flat {myFlats.find(f => staff.flatIds?.includes(f.id))?.flatNumber || 'Unknown'}</span>
                                                 </div>
@@ -274,6 +285,15 @@ export const OwnerStaffPage: React.FC = () => {
                                                 </Button>
                                                 <button
                                                     onClick={() => {
+                                                        const currentRole = staff.staffRole || 'Maid';
+                                                        const standardRoles = ['Maid', 'Cook', 'Driver', 'Nanny', 'Gardener', 'Guard'];
+                                                        if (standardRoles.includes(currentRole)) {
+                                                            setHelpType(currentRole);
+                                                            setCustomHelpType('');
+                                                        } else {
+                                                            setHelpType('Other');
+                                                            setCustomHelpType(currentRole);
+                                                        }
                                                         setEditingStaff({
                                                             ...staff,
                                                             mappedFlatId: staff.flatIds?.[0] || ''
@@ -304,11 +324,14 @@ export const OwnerStaffPage: React.FC = () => {
                         <form onSubmit={(e) => {
                             e.preventDefault();
                             const formData = new FormData(e.currentTarget);
+                            const finalRole = helpType === 'Other' ? customHelpType : helpType;
+
                             handleSaveStaff({
                                 name: formData.get('name'),
                                 email: formData.get('email'),
                                 phone: formData.get('phone'),
-                                mappedFlatId: formData.get('mappedFlatId')
+                                mappedFlatId: formData.get('mappedFlatId'),
+                                staffRole: finalRole
                             });
                         }} className="space-y-4">
                             <div className="space-y-1">
@@ -321,6 +344,38 @@ export const OwnerStaffPage: React.FC = () => {
                                     required
                                 />
                             </div>
+
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-gray-700">Type of Help</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['Maid', 'Cook', 'Driver', 'Nanny', 'Gardener', 'Other'].map((type) => (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => setHelpType(type)}
+                                            className={`px-3 py-2 text-sm rounded-lg border transition-colors ${helpType === type
+                                                    ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'
+                                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
+                                </div>
+                                {helpType === 'Other' && (
+                                    <div className="mt-2">
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 placeholder-gray-400"
+                                            placeholder="Specify custom role (e.g. Electrician, Dog Walker)"
+                                            value={customHelpType}
+                                            onChange={(e) => setCustomHelpType(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="block text-sm font-medium text-gray-700">Phone</label>
