@@ -328,10 +328,34 @@ const VehicleModal: React.FC<{
         floor: undefined as number | undefined
     });
 
+    const [buildings, setBuildings] = useState<any[]>([]);
+    const [selectedBuildingId, setSelectedBuildingId] = useState(initialData?.building_id || '');
+    const { user } = useAuthStore();
+    const isSecurityUser = userRole === 'security';
+
+    useEffect(() => {
+        if (isSecurityUser && user?.societyId) {
+            supabase.from('buildings').select('id, name').eq('society_id', user.societyId)
+                .then(({ data }) => setBuildings(data || []));
+        }
+    }, [isSecurityUser, user?.societyId]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData);
+        if (isSecurityUser) {
+            // Security: submit with userId = self, no flat, building name in parkingSlot for reference
+            const buildingName = buildings.find(b => b.id === selectedBuildingId)?.name || '';
+            onSubmit({
+                ...formData,
+                userId: user?.uid,
+                flatId: null,
+                floor: undefined,
+                parkingSlot: formData.parkingSlot || `${buildingName} - Security`
+            });
+        } else {
+            onSubmit(formData);
+        }
     };
 
     return (
@@ -361,32 +385,55 @@ const VehicleModal: React.FC<{
                     />
                 </div>
 
-                {/* Unified Residence Selection */}
-                <ResidenceSelector
-                    initialFlatId={formData.flatId}
-                    onSelect={(flatId, _, floor) => setFormData({ ...formData, flatId, floor })}
-                    restrictedToUserFlats={userRole !== 'admin' && userRole !== 'staff'}
-                    showResidentInfo={userRole === 'admin' || userRole === 'staff'}
-                />
+                {/* Residence Selection: hide for security, show for others */}
+                {!isSecurityUser && (
+                    <ResidenceSelector
+                        initialFlatId={formData.flatId}
+                        onSelect={(flatId, _, floor) => setFormData({ ...formData, flatId, floor })}
+                        restrictedToUserFlats={userRole !== 'admin' && userRole !== 'staff'}
+                        showResidentInfo={userRole === 'admin' || userRole === 'staff'}
+                    />
+                )}
 
-
-                <div className="grid grid-cols-1 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Resident</label>
+                {/* Security: show building-only selector */}
+                {isSecurityUser && (
+                    <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700">Assigned Building</label>
                         <select
-                            value={formData.userId}
-                            onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
+                            value={selectedBuildingId}
+                            onChange={(e) => setSelectedBuildingId(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
                             required
-                            disabled={residents.length === 1}
                         >
-                            <option value="">Select Resident</option>
-                            {residents.map(r => (
-                                <option key={r.uid} value={r.uid}>{r.name}</option>
+                            <option value="">Select Building...</option>
+                            {buildings.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
                             ))}
                         </select>
+                        <p className="text-xs text-gray-500 italic mt-1">As security, vehicles are registered at building level.</p>
                     </div>
-                </div>
+                )}
+
+
+                {!isSecurityUser && (
+                    <div className="grid grid-cols-1 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Select Resident</label>
+                            <select
+                                value={formData.userId}
+                                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
+                                required
+                                disabled={residents.length === 1}
+                            >
+                                <option value="">Select Resident</option>
+                                {residents.map(r => (
+                                    <option key={r.uid} value={r.uid}>{r.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                )}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                     <select

@@ -53,13 +53,13 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'My Salary', path: '/salary/requests', icon: Wallet, roles: ['security', 'staff'] },
     { name: 'Complaints', path: '/complaints', icon: ClipboardList, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
     { name: 'Announcements', path: '/announcements', icon: Bell, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
-    { name: 'Vehicles', path: '/vehicles', icon: Car, roles: ['admin', 'owner', 'tenant', 'staff'] },
+    { name: 'Vehicles', path: '/vehicles', icon: Car, roles: ['admin', 'owner', 'tenant', 'staff', 'security'] },
     { name: 'Pets', path: '/pets', icon: PawPrint, roles: ['admin', 'owner', 'tenant'] },
     { name: 'Services', path: '/services', icon: Wrench, roles: ['admin', 'owner', 'tenant', 'staff'] },
     { name: 'Emergencies', path: '/emergency', icon: Phone, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
-    { name: 'Amenities', path: '/amenities', icon: Heart, roles: ['admin', 'owner', 'tenant'] },
-    { name: 'Polls', path: '/polls', icon: Vote, roles: ['admin', 'owner', 'tenant'] },
-    { name: 'Documents', path: '/documents', icon: FolderOpen, roles: ['admin', 'owner', 'tenant', 'staff'] },
+    { name: 'Amenities', path: '/amenities', icon: Heart, roles: ['admin', 'owner', 'tenant', 'security'] },
+    { name: 'Polls', path: '/polls', icon: Vote, roles: ['admin', 'owner', 'tenant', 'security'] },
+    { name: 'Documents', path: '/documents', icon: FolderOpen, roles: ['admin', 'owner', 'tenant', 'staff', 'security'] },
     { name: 'Settings', path: '/settings', icon: Settings, roles: ['admin'] },
   ];
 };

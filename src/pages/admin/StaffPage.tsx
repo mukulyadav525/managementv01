@@ -42,7 +42,7 @@ export const StaffPage: React.FC = () => {
             ]);
 
             // Filter only staff members
-            const staff = (usersData as StaffUser[]).filter(u => u.role === 'staff');
+            const staff = (usersData as StaffUser[]).filter(u => u.role === 'staff' || u.role === 'security');
             setStaffList(staff);
             setFlats(flatsData as Flat[]);
         } catch (error) {
@@ -80,10 +80,11 @@ export const StaffPage: React.FC = () => {
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
-                role: 'staff' as any,
-                staffType: formData.staffType,
-                staffRole: formData.staffRole,
+                role: formData.staffType === 'security' ? 'security' as any : 'staff' as any,
+                staffType: formData.staffType === 'security' ? 'society_staff' : formData.staffType,
+                staffRole: formData.staffType === 'security' ? 'Security Guard' : formData.staffRole,
                 flatIds: formData.staffType === 'domestic_staff' && formData.mappedFlatId ? [formData.mappedFlatId] : [],
+                buildingId: formData.buildingId || null,
                 status: editingStaff ? editingStaff.status : 'active',
                 updatedAt: new Date().toISOString()
             };
@@ -341,18 +342,29 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         name: initialData?.name || '',
         email: initialData?.email || '',
         phone: initialData?.phone || '',
-        staffType: initialData?.staffType || 'society_staff',
+        staffType: initialData?.role === 'security' ? 'security' : (initialData?.staffType || 'society_staff'),
         staffRole: initialData?.staffRole || '',
         mappedFlatId: initialData?.flatIds?.[0] || '',
-        floor: undefined as number | undefined
+        floor: undefined as number | undefined,
+        buildingId: initialData?.buildingId || ''
     });
+
+    const [buildings, setBuildings] = useState<any[]>([]);
+    const { user } = useAuthStore();
 
     const [isCustomRole, setIsCustomRole] = useState(false);
 
-    const societyRoles = ['Receptionist', 'Maintenance', 'Security', 'Manager', 'Accountant', 'Tech Support'];
+    const societyRoles = ['Receptionist', 'Maintenance', 'Manager', 'Accountant', 'Tech Support'];
     const domesticRoles = ['Maid', 'Cook', 'Driver', 'Milkman', 'Gardener'];
 
     const currentRoles = formData.staffType === 'society_staff' ? societyRoles : domesticRoles;
+
+    useEffect(() => {
+        if (user?.societyId) {
+            supabase.from('buildings').select('id, name').eq('society_id', user.societyId)
+                .then(({ data }) => setBuildings(data || []));
+        }
+    }, [user?.societyId]);
 
     useEffect(() => {
         if (initialData?.staffRole && !currentRoles.includes(initialData.staffRole)) {
@@ -407,7 +419,18 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
 
                 <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">Staff Category</label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, staffType: 'security', staffRole: 'Security Guard', mappedFlatId: '' })}
+                            className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'security'
+                                ? 'bg-green-50 border-green-600 ring-1 ring-green-600'
+                                : 'bg-white border-gray-200 hover:border-green-400'
+                                }`}
+                        >
+                            <div className="font-bold text-gray-900">Security</div>
+                            <div className="text-xs text-gray-500">Guards, Gate security</div>
+                        </button>
                         <button
                             type="button"
                             onClick={() => setFormData({ ...formData, staffType: 'society_staff', staffRole: '', mappedFlatId: '' })}
@@ -417,7 +440,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                                 }`}
                         >
                             <div className="font-bold text-gray-900">Society Staff</div>
-                            <div className="text-xs text-gray-500">Receptionists, Maintenance, Tech support</div>
+                            <div className="text-xs text-gray-500">Maintenance, Accountant</div>
                         </button>
                         <button
                             type="button"
@@ -428,59 +451,83 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                                 }`}
                         >
                             <div className="font-bold text-gray-900">Domestic Staff</div>
-                            <div className="text-xs text-gray-500">Maids, Milkmen, Private Drivers</div>
+                            <div className="text-xs text-gray-500">Maids, Cooks, Drivers</div>
                         </button>
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">Specific Role</label>
-                    <div className="flex flex-wrap gap-2">
-                        {currentRoles.map((role) => (
+                {formData.staffType !== 'security' && (
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">Specific Role</label>
+                        <div className="flex flex-wrap gap-2">
+                            {currentRoles.map((role) => (
+                                <button
+                                    key={role}
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData({ ...formData, staffRole: role });
+                                        setIsCustomRole(false);
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${formData.staffRole === role && !isCustomRole
+                                        ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
+                                        }`}
+                                >
+                                    {role}
+                                </button>
+                            ))}
                             <button
-                                key={role}
                                 type="button"
                                 onClick={() => {
-                                    setFormData({ ...formData, staffRole: role });
-                                    setIsCustomRole(false);
+                                    setIsCustomRole(true);
+                                    setFormData({ ...formData, staffRole: '' });
                                 }}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${formData.staffRole === role && !isCustomRole
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isCustomRole
                                     ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
                                     : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
                                     }`}
                             >
-                                {role}
+                                Other / Custom
                             </button>
-                        ))}
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsCustomRole(true);
-                                setFormData({ ...formData, staffRole: '' });
-                            }}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${isCustomRole
-                                ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                                : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
-                                }`}
-                        >
-                            Other / Custom
-                        </button>
-                    </div>
-
-                    {isCustomRole && (
-                        <div className="mt-3 animate-in fade-in slide-in-from-top-2">
-                            <input
-                                type="text"
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 text-sm"
-                                placeholder="Type custom role..."
-                                value={formData.staffRole}
-                                onChange={(e) => setFormData({ ...formData, staffRole: e.target.value })}
-                                required
-                            />
                         </div>
-                    )}
-                </div>
 
+                        {isCustomRole && (
+                            <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                                <input
+                                    type="text"
+                                    className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 text-sm"
+                                    placeholder="Type custom role..."
+                                    value={formData.staffRole}
+                                    onChange={(e) => setFormData({ ...formData, staffRole: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Security: Building-only selector */}
+                {formData.staffType === 'security' && (
+                    <div className="space-y-4 bg-green-50/50 p-4 rounded-xl border border-green-100">
+                        <label className="block text-sm font-medium text-green-900">Assign to Building</label>
+                        <select
+                            value={formData.buildingId}
+                            onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-green-500"
+                            required
+                        >
+                            <option value="">Select Building...</option>
+                            {buildings.map(b => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                        <p className="mt-1 text-xs text-green-700 italic flex items-center gap-1">
+                            <Shield size={12} /> Security guards are assigned to a building, not specific flats.
+                        </p>
+                    </div>
+                )}
+
+                {/* Domestic Staff: Flat selector */}
                 {formData.staffType === 'domestic_staff' && (
                     <div className="space-y-4 bg-amber-50/50 p-4 rounded-xl border border-amber-100">
                         <label className="block text-sm font-medium text-amber-900">Map to Resident Flat</label>
@@ -492,6 +539,20 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
 
                         <p className="mt-1 text-xs text-amber-700 italic flex items-center gap-1">
                             <Home size={12} /> Domestic staff must be assigned to a specific property.
+                        </p>
+                    </div>
+                )}
+
+                {/* Society Staff: Building + Flat selector */}
+                {formData.staffType === 'society_staff' && (
+                    <div className="space-y-4 bg-primary-50/50 p-4 rounded-xl border border-primary-100">
+                        <label className="block text-sm font-medium text-primary-900">Map to Building / Flat (Optional)</label>
+                        <ResidenceSelector
+                            initialFlatId={formData.mappedFlatId}
+                            onSelect={(flatId, _, floor) => setFormData({ ...formData, mappedFlatId: flatId, floor })}
+                        />
+                        <p className="mt-1 text-xs text-primary-700 italic flex items-center gap-1">
+                            <Home size={12} /> Society staff can work across multiple buildings and flats.
                         </p>
                     </div>
                 )}
