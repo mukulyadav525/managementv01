@@ -30,12 +30,12 @@ export const toSnake = (obj: any): any => {
 
 // Generic Supabase operations
 export class SupabaseService {
-    static async getDocument<T>(tableName: string, docId: string): Promise<T | null> {
+    static async getDocument<T>(tableName: string, docId: string, idColumn: string = 'id'): Promise<T | null> {
         try {
             const { data, error } = await supabase
                 .from(tableName)
                 .select('*')
-                .eq('id', docId)
+                .eq(idColumn, docId)
                 .single();
 
             if (error) {
@@ -85,13 +85,14 @@ export class SupabaseService {
     static async updateDocument<T>(
         tableName: string,
         docId: string,
-        data: Partial<T>
+        data: Partial<T>,
+        idColumn: string = 'id'
     ): Promise<void> {
         try {
             const { error } = await supabase
                 .from(tableName)
                 .update(toSnake(data))
-                .eq('id', docId);
+                .eq(idColumn, docId);
 
             if (error) throw error;
         } catch (error) {
@@ -100,12 +101,12 @@ export class SupabaseService {
         }
     }
 
-    static async deleteDocument(tableName: string, docId: string): Promise<void> {
+    static async deleteDocument(tableName: string, docId: string, idColumn: string = 'id'): Promise<void> {
         try {
             const { error } = await supabase
                 .from(tableName)
                 .delete()
-                .eq('id', docId);
+                .eq(idColumn, docId);
 
             if (error) throw error;
         } catch (error) {
@@ -151,7 +152,7 @@ export class StorageService {
 // User services
 export class UserService extends SupabaseService {
     static async updateKYC(uid: string, kycData: any) {
-        return this.updateDocument(`users`, uid, { kycDocuments: kycData });
+        return this.updateDocument(`users`, uid, { kycDocuments: kycData }, 'uid');
     }
 
     static async getUsers(societyId: string, role?: string) {
@@ -163,7 +164,7 @@ export class UserService extends SupabaseService {
     }
 
     static async getUser(uid: string) {
-        return this.getDocument(`users`, uid);
+        return this.getDocument(`users`, uid, 'uid');
     }
 }
 

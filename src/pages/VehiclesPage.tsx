@@ -121,7 +121,7 @@ export const VehiclesPage: React.FC = () => {
             setLoading(true);
             const { data, error } = await supabase
                 .from('vehicles')
-                .select('*, users(name), flats(flat_number)')
+                .select('*, user_id(name), flat_id(flat_number)')
                 .eq('society_id', user.societyId);
 
             if (error) throw error;
@@ -259,8 +259,8 @@ export const VehiclesPage: React.FC = () => {
                                                 <div className="text-xs text-gray-500 uppercase">{v.brand} {v.model}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-sm">{v.users?.name || 'Unknown'}</div>
-                                                <div className="text-xs text-gray-500 font-medium">Flat {v.flats?.flat_number || 'N/A'}</div>
+                                                <div className="text-sm">{v.user_id?.name || 'Unknown'}</div>
+                                                <div className="text-xs text-gray-500 font-medium">Flat {v.flat_id?.flat_number || 'N/A'}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="capitalize px-2 py-0.5 bg-gray-100 rounded text-xs">
