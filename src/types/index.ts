@@ -104,7 +104,7 @@ export interface Flat {
   bhkType: string;
   area: number;
   ownerId: string;
-  currentTenantId?: string;
+  tenantId?: string;
   occupancyStatus: OccupancyStatus;
   parkingSlots: string[];
 

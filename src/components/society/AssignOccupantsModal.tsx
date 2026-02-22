@@ -25,7 +25,7 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
     const [availableTenants, setAvailableTenants] = useState<User[]>([]);
 
     const [selectedOwnerId, setSelectedOwnerId] = useState<string>(unit.ownerId || '');
-    const [selectedTenantId, setSelectedTenantId] = useState<string>(unit.currentTenantId || '');
+    const [selectedTenantId, setSelectedTenantId] = useState<string>(unit.tenantId || '');
     const [ownerLivesHere, setOwnerLivesHere] = useState<boolean>(unit.occupancyStatus === 'owner-occupied' || unit.ownerLivesInHouse === true);
 
     // House specific states
@@ -37,7 +37,7 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
             loadUsers();
             // Reset state based on incoming unit whenever opened
             setSelectedOwnerId(unit.ownerId || '');
-            setSelectedTenantId(unit.currentTenantId || '');
+            setSelectedTenantId(unit.tenantId || '');
             setOwnerLivesHere(unit.occupancyStatus === 'owner-occupied' || unit.ownerLivesInHouse === true);
             setOwnerFloorNumber(unit.ownerFloorNumber || 1);
             setTenantsByFloor(unit.tenantsByFloor || {});
@@ -101,10 +101,10 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
                     delete safeTenants[ownerFloorNumber.toString()];
                 }
                 unitUpdate.tenants_by_floor = safeTenants;
-                // A house's 'current_tenant_id' might just become the first valid one or left null to rely on tenants_by_floor
-                unitUpdate.current_tenant_id = Object.values(safeTenants)[0] || null;
+                // For house type, use the first tenant from the floor map
+                unitUpdate.tenant_id = Object.values(safeTenants)[0] || null;
             } else {
-                unitUpdate.current_tenant_id = finalTenantId;
+                unitUpdate.tenant_id = finalTenantId;
             }
 
             const { error: unitError } = await supabase
@@ -124,7 +124,7 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
             }
 
             // Add unit to new tenant
-            if (finalTenantId && finalTenantId !== unit.currentTenantId) {
+            if (finalTenantId && finalTenantId !== unit.tenantId) {
                 await SocietyService.assignFlatToUser(finalTenantId, unit.id);
             }
 

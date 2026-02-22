@@ -63,7 +63,7 @@ export const ResidentsPage: React.FC = () => {
             try {
                 const { data: flatsData, error: flatsError } = await supabase
                     .from('flats')
-                    .select('id, flat_number, floor, building_id')
+                    .select('id, flat_number, floor, building_id, owner_id, tenant_id, occupancy_status')
                     .eq('society_id', user.societyId)
                     .order('floor', { ascending: true })
                     .order('flat_number', { ascending: true });
@@ -354,19 +354,25 @@ export const ResidentsPage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-wrap gap-1">
-                                                    {resident.flatIds && resident.flatIds.length > 0 ? (
-                                                        resident.flatIds.map(fId => {
-                                                            const flat = flats.find(f => f.id === fId);
-                                                            const building = buildings.find(b => b.id === flat?.building_id);
+                                                    {(() => {
+                                                        // Primary: use flatIds from user record
+                                                        // Fallback: scan flats by owner_id / tenant_id (for users assigned via AssignOccupantsModal)
+                                                        const assignedFlats = resident.flatIds && resident.flatIds.length > 0
+                                                            ? flats.filter((f: any) => resident.flatIds!.includes(f.id))
+                                                            : flats.filter((f: any) => f.owner_id === resident.uid || f.tenant_id === resident.uid);
+
+                                                        if (assignedFlats.length === 0) {
+                                                            return <span className="text-xs text-gray-400">No unit</span>;
+                                                        }
+                                                        return assignedFlats.map((flat: any) => {
+                                                            const building = buildings.find(b => b.id === flat.building_id);
                                                             return (
-                                                                <span key={fId} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
-                                                                    {flat ? `Unit ${flat.flat_number || flat.flatNumber} (${building ? building.name : ''})` : fId}
+                                                                <span key={flat.id} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
+                                                                    {`Unit ${flat.flat_number || flat.flatNumber} (${building ? building.name : ''})`}
                                                                 </span>
                                                             );
-                                                        })
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400">No unit</span>
-                                                    )}
+                                                        });
+                                                    })()}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
