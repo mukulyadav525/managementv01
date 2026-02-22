@@ -14,6 +14,12 @@ import { Input } from '@/components/common';
 import { ReceiptModal } from '@/components/payments/ReceiptModal';
 
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export const PaymentsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -91,14 +97,54 @@ export const PaymentsPage: React.FC = () => {
 
   const handlePayment = async (paymentId: string) => {
     if (!user?.societyId) return;
+    const payment = payments.find(p => p.id === paymentId);
+    if (!payment) return;
+
+    const totalAmount = payment.amount + (new Date(payment.dueDate) < new Date() ? (payment.fineAmount || 0) : 0);
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+      amount: totalAmount * 100, // Razorpay expects amount in paise
+      currency: 'INR',
+      name: 'Smart Society',
+      description: `${payment.type.toUpperCase()} Payment - ${payment.month}`,
+      handler: async function (response: any) {
+        try {
+          await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
+          // Update transaction ID if available from Razorpay
+          if (response.razorpay_payment_id) {
+            await supabase
+              .from('payments')
+              .update({ transaction_id: response.razorpay_payment_id })
+              .eq('id', paymentId);
+          }
+          toast.success('Payment successful!');
+          loadPayments();
+          setShowPaymentModal(false);
+        } catch (error) {
+          console.error('Error updating payment status:', error);
+          toast.error('Payment acknowledged, but failed to update status. Please contact admin.');
+        }
+      },
+      prefill: {
+        name: user.name,
+        email: user.email,
+        contact: user.phone
+      },
+      theme: {
+        color: '#2563eb' // primary-600
+      }
+    };
 
     try {
-      await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
-      toast.success('Payment successful!');
-      loadPayments();
-      setShowPaymentModal(false);
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        toast.error(`Payment failed: ${response.error.description}`);
+      });
+      rzp.open();
     } catch (error) {
-      toast.error('Payment failed');
+      console.error('Error opening Razorpay:', error);
+      toast.error('Could not initialize payment. Please try again later.');
     }
   };
 

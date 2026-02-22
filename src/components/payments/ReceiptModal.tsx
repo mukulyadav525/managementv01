@@ -90,8 +90,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900">{society.name}</h2>
                             <div className="text-sm text-gray-500 mt-1 space-y-0.5">
-                                <p>{society.address.street}, {society.address.area}</p>
-                                <p>{society.address.city}, {society.address.state} - {society.address.pincode}</p>
+                                <p>{society.address?.street || 'N/A'}, {society.address?.area || ''}</p>
+                                <p>{society.address?.city || ''}, {society.address?.state || ''} - {society.address?.pincode || ''}</p>
                                 <p>Email: {society.contactEmail}</p>
                                 <p>Phone: {society.contactPhone}</p>
                             </div>
