@@ -9,6 +9,7 @@ import { AddTenantModal } from '@/components/tenant/AddTenantModal';
 import { EditTenantModal } from '@/components/tenant/EditTenantModal';
 import { TenantDetailsModal } from '@/components/tenant/TenantDetailsModal';
 import { RentAgreementModal } from '@/components/tenant/RentAgreementModal';
+import { AssignOccupantsModal } from '@/components/society/AssignOccupantsModal';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 
@@ -27,6 +28,7 @@ export const OwnerTenantsPage: React.FC = () => {
     const [showBillModal, setShowBillModal] = useState<{ isOpen: boolean; flat: Flat | null; tenant: User | null }>({ isOpen: false, flat: null, tenant: null });
     const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ isOpen: boolean; tenant: User | null }>({ isOpen: false, tenant: null });
     const [showAgreementModal, setShowAgreementModal] = useState<{ isOpen: boolean; flatId: string; tenantId: string; agreement: RentAgreement | null }>({ isOpen: false, flatId: '', tenantId: '', agreement: null });
+    const [assignOccupantsUnit, setAssignOccupantsUnit] = useState<Flat | null>(null);
 
     const [vehicles, setVehicles] = useState<{ [key: string]: any[] }>({});
     const [agreements, setAgreements] = useState<{ [key: string]: RentAgreement }>({}); // tenantId -> agreement
@@ -277,14 +279,21 @@ export const OwnerTenantsPage: React.FC = () => {
                                                 <div>
                                                     <h3 className="text-xl font-bold text-gray-900">Unit {flat.flatNumber}</h3>
                                                     <p className="text-sm text-gray-500">{flat.bhkType} • Floor {flat.floor}</p>
-                                                    <div className="mt-2">
-                                                        {hasTenants ? (
-                                                            <span className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2.5 py-0.5 rounded-full text-xs font-medium">
-                                                                {flatTenants.length} Tenant(s)
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1 text-gray-700 bg-gray-100 px-2.5 py-0.5 rounded-full text-xs font-medium">
-                                                                Vacant
+                                                    <div className="mt-2 flex gap-2">
+                                                        {(() => {
+                                                            const s = flat.occupancyStatus;
+                                                            const cfg: Record<string, { label: string; cls: string }> = {
+                                                                'unassigned': { label: 'Unassigned', cls: 'bg-gray-100 text-gray-600' },
+                                                                'owner-occupied': { label: 'Owner Occupied', cls: 'bg-blue-100 text-blue-700' },
+                                                                'tenant-occupied': { label: 'Tenant Occupied', cls: 'bg-green-100 text-green-700' },
+                                                                'vacant': { label: 'Vacant', cls: 'bg-yellow-100 text-yellow-700' },
+                                                            };
+                                                            const { label, cls } = cfg[s] ?? { label: 'Vacant', cls: 'bg-yellow-100 text-yellow-700' };
+                                                            return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label}</span>;
+                                                        })()}
+                                                        {hasTenants && (
+                                                            <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full text-xs font-medium">
+                                                                {flatTenants.length} Occupant(s)
                                                             </span>
                                                         )}
                                                     </div>
@@ -292,14 +301,23 @@ export const OwnerTenantsPage: React.FC = () => {
                                             </div>
 
                                             {/* Flat Actions */}
-                                            {hasTenants && (
+                                            <div className="flex gap-2">
                                                 <Button
                                                     size="sm"
-                                                    onClick={() => setShowBillModal({ isOpen: true, flat, tenant: null })}
+                                                    variant="secondary"
+                                                    onClick={() => setAssignOccupantsUnit(flat)}
                                                 >
-                                                    <DollarSign size={16} className="mr-2" /> Global Request
+                                                    Assign Occupants
                                                 </Button>
-                                            )}
+                                                {hasTenants && (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => setShowBillModal({ isOpen: true, flat, tenant: null })}
+                                                    >
+                                                        <DollarSign size={16} className="mr-2" /> Global Request
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Tenants List */}
@@ -433,6 +451,17 @@ export const OwnerTenantsPage: React.FC = () => {
                     ownerId={user?.uid || ''}
                     existingAgreement={showAgreementModal.agreement}
                 />
+
+                {assignOccupantsUnit && user && (
+                    <AssignOccupantsModal
+                        isOpen={!!assignOccupantsUnit}
+                        onClose={() => setAssignOccupantsUnit(null)}
+                        unit={assignOccupantsUnit}
+                        societyId={user.societyId}
+                        societyType={user.societyType}
+                        onSuccess={loadOwnedData}
+                    />
+                )}
             </div>
         </Layout>
     );
