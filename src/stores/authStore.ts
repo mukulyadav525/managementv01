@@ -226,94 +226,91 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializeAuth: async () => {
     console.log('authStore: [INIT] Starting auth system...');
 
-    // Ensure we start in loading state
-    set({ loading: true });
+    // 1. Set full loading state
+    set({ loading: true, error: null });
 
-    // 1. Setup Auth Listener first to catch any immediate redirects/events
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`authStore: [EVENT] ${event}`, session?.user?.id || 'No session');
-
-      if (event === 'SIGNED_OUT') {
-        set({ user: null, loading: false, needsCompletion: false });
-        return;
-      }
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        if (session?.user) {
-          const currentState = useAuthStore.getState();
-          // Only fetch if session user changed or we don't have a user yet
-          if (!currentState.user || currentState.user.uid !== session.user.id) {
-            console.log('authStore: [EVENT] Fetching profile for user:', session.user.id);
-            set({ loading: true });
-
-            try {
-              const { data: userData, error: profileError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('uid', session.user.id)
-                .single();
-
-              if (profileError) {
-                if (profileError.code === 'PGRST116') {
-                  set({ user: null, loading: false, needsCompletion: true });
-                } else {
-                  console.error('authStore: [EVENT] Profile fetch failed:', profileError.message);
-                  set({ loading: false });
-                }
-              } else if (userData) {
-                set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
-              }
-            } catch (err) {
-              console.error('authStore: [EVENT] Internal profile fetch error:', err);
-              set({ loading: false });
-            }
-          } else {
-            // Already synced
-            set({ loading: false });
-          }
-        } else if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          // No user in these events means signed out
-          set({ user: null, loading: false, needsCompletion: false });
-        }
-      }
-    });
-
-    // 2. Explicit initial session check to be fast
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error('authStore: [INIT] getSession error:', sessionError.message);
+    // 2. Safety Timeout (ensure the app always loads even if Supabase/Network is slow)
+    const safetyTimeout = setTimeout(() => {
+      const state = useAuthStore.getState();
+      if (state.loading) {
+        console.warn('authStore: [INIT] Safety timeout reached! Forcing loading: false');
         set({ loading: false });
-        return;
       }
+    }, 6000); // 6 seconds for robustness
 
-      if (session?.user) {
-        console.log('authStore: [INIT] Initial session found:', session.user.id);
+    // Helper function to fetch and sync profile
+    const syncProfile = async (uid: string) => {
+      try {
         const { data: userData, error: profileError } = await supabase
           .from('users')
           .select('*')
-          .eq('uid', session.user.id)
+          .eq('uid', uid)
           .single();
 
         if (profileError) {
           if (profileError.code === 'PGRST116') {
+            console.log('authStore: [INIT] No profile found for UID:', uid);
             set({ user: null, loading: false, needsCompletion: true });
           } else {
             console.error('authStore: [INIT] Profile fetch error:', profileError.message);
             set({ loading: false });
           }
         } else if (userData) {
-          console.log('authStore: [INIT] Profile loaded successfully');
+          console.log('authStore: [INIT] Profile synced successfully');
           set({ user: toCamel(userData) as User, loading: false, needsCompletion: false });
         }
+      } catch (err) {
+        console.error('authStore: [INIT] Critical sync error:', err);
+        set({ loading: false });
+      } finally {
+        clearTimeout(safetyTimeout);
+      }
+    };
+
+    // 3. Setup Auth Listener (Future proof)
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`authStore: [INIT_EVENT] ${event}`, session?.user?.id || 'No session');
+
+      if (event === 'SIGNED_OUT') {
+        set({ user: null, loading: false, needsCompletion: false });
+        clearTimeout(safetyTimeout);
+      } else if (session?.user) {
+        // Only fetch if session changed or not loaded
+        const current = useAuthStore.getState();
+        if (!current.user || current.user.uid !== session.user.id) {
+          await syncProfile(session.user.id);
+        } else {
+          set({ loading: false });
+          clearTimeout(safetyTimeout);
+        }
+      } else {
+        set({ loading: false });
+        clearTimeout(safetyTimeout);
+      }
+    });
+
+    // 4. Initial Session Check (Immediate)
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('authStore: [INIT] getSession error:', sessionError.message);
+        set({ loading: false });
+        clearTimeout(safetyTimeout);
+        return;
+      }
+
+      if (session?.user) {
+        await syncProfile(session.user.id);
       } else {
         console.log('authStore: [INIT] No initial session found');
         set({ loading: false });
+        clearTimeout(safetyTimeout);
       }
     } catch (e: any) {
-      console.error('authStore: [INIT] Critical error:', e);
-      set({ loading: false, error: e.message });
+      console.error('authStore: [INIT] Session check exploded:', e);
+      set({ loading: false });
+      clearTimeout(safetyTimeout);
     }
   },
 
