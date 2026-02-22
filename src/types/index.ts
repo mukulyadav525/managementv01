@@ -304,6 +304,8 @@ export interface SalaryPayment {
   approvedAt?: string;
   paidAt?: string;
   approvedBy?: string;
+  paymentMethod?: string;
+  transactionId?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;

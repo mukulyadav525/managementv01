@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Layout } from '@/components/layout/Layout';
-import { DollarSign, CheckCircle, Clock, Search, User, Plus, Trash2 } from 'lucide-react';
+import { DollarSign, CheckCircle, Clock, Search, User, Plus, Trash2, FileText } from 'lucide-react';
 import { Button, Card, Modal } from '@/components/common';
 import { SalaryPaymentService, UserService } from '@/services/supabase.service';
 import { SalaryPayment, User as UserType } from '@/types';
+import { SalaryReceiptModal } from '@/components/payments/SalaryReceiptModal';
 import toast from 'react-hot-toast';
 
 export const AdminSalaryPage: React.FC = () => {
@@ -15,6 +16,9 @@ export const AdminSalaryPage: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState<SalaryPayment | null>(null);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [receiptEmployee, setReceiptEmployee] = useState<UserType | null>(null);
 
     useEffect(() => {
         if (currentUser?.societyId) {
@@ -41,29 +45,93 @@ export const AdminSalaryPage: React.FC = () => {
         }
     };
 
-    const handleDirectPayment = async (formData: any) => {
+    const handleDirectPayment = async (paymentId: string | null, formData: any) => {
         if (!currentUser?.societyId) return;
+
+        const processPaymentUpdate = async (method: string, txId: string) => {
+            if (paymentId) {
+                await SalaryPaymentService.updateSalaryPayment(paymentId, {
+                    status: 'paid',
+                    paidAt: new Date().toISOString(),
+                    paymentMethod: method,
+                    transactionId: txId,
+                    notes: formData.notes
+                });
+            } else {
+                await SalaryPaymentService.createSalaryRequest({
+                    societyId: currentUser.societyId,
+                    guardId: formData.employeeId,
+                    amount: formData.amount,
+                    month: formData.month,
+                    status: 'paid',
+                    requestedAt: new Date().toISOString(),
+                    paidAt: new Date().toISOString(),
+                    approvedAt: new Date().toISOString(),
+                    approvedBy: currentUser.uid,
+                    paymentMethod: method,
+                    transactionId: txId,
+                    notes: formData.notes
+                });
+            }
+        };
+
+        if (formData.paymentMethod === 'bypass') {
+            try {
+                setLoading(true);
+                await processPaymentUpdate('bypass', `MOCK_SALARY_${Date.now()}`);
+                toast.success('Salary payment recorded successfully (Bypass)');
+                setShowPaymentModal(false);
+                loadInitialData();
+            } catch (error) {
+                toast.error('Failed to process payment');
+            } finally {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // Razorpay logic
+        const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+        if (!rzpKey || rzpKey === 'rzp_test_placeholder') {
+            toast.error('Razorpay API Key missing. Please use Bypass or configure Netlify.');
+            return;
+        }
+
+        const employee = employees.find(e => e.uid === formData.employeeId);
+
+        const options = {
+            key: rzpKey,
+            amount: Math.round(formData.amount * 100),
+            currency: 'INR',
+            name: 'Smart Society',
+            description: `Salary Payment - ${formData.month}`,
+            handler: async function (response: any) {
+                try {
+                    setLoading(true);
+                    await processPaymentUpdate('razorpay', response.razorpay_payment_id);
+                    toast.success('Salary paid successfully via Razorpay');
+                    setShowPaymentModal(false);
+                    loadInitialData();
+                } catch (error) {
+                    console.error('Error updating salary status:', error);
+                    toast.error('Payment successful, but failed to update status in database.');
+                } finally {
+                    setLoading(false);
+                }
+            },
+            prefill: {
+                name: employee?.name || '',
+                email: employee?.email || '',
+                contact: employee?.phone || ''
+            },
+            theme: { color: '#4f46e5' }
+        };
+
         try {
-            setLoading(true);
-            await SalaryPaymentService.createSalaryRequest({
-                societyId: currentUser.societyId,
-                guardId: formData.employeeId,
-                amount: formData.amount,
-                month: formData.month,
-                status: 'paid',
-                requestedAt: new Date().toISOString(),
-                paidAt: new Date().toISOString(),
-                approvedAt: new Date().toISOString(),
-                approvedBy: currentUser.uid,
-                notes: formData.notes
-            });
-            toast.success('Salary payment recorded successfully');
-            setShowPaymentModal(false);
-            loadInitialData();
+            const rzp = new (window as any).Razorpay(options);
+            rzp.open();
         } catch (error) {
-            toast.error('Failed to process payment');
-        } finally {
-            setLoading(false);
+            toast.error('Could not initialize Razorpay');
         }
     };
 
@@ -82,8 +150,8 @@ export const AdminSalaryPage: React.FC = () => {
         try {
             await SalaryPaymentService.updateSalaryPayment(paymentId, {
                 status: 'approved',
-                approved_at: new Date().toISOString(),
-                approved_by: currentUser?.uid
+                approvedAt: new Date().toISOString(),
+                approvedBy: currentUser?.uid
             });
             toast.success('Salary request approved');
             loadInitialData();
@@ -92,18 +160,14 @@ export const AdminSalaryPage: React.FC = () => {
         }
     };
 
-    const handleMarkPaid = async (paymentId: string) => {
-        const notes = prompt('Enter payment reference or notes:');
-        try {
-            await SalaryPaymentService.updateSalaryPayment(paymentId, {
-                status: 'paid',
-                paid_at: new Date().toISOString(),
-                notes: notes || undefined
-            });
-            toast.success('Salary marked as paid');
-            loadInitialData();
-        } catch (error) {
-            toast.error('Failed to update status');
+    const handleViewReceipt = (payment: SalaryPayment) => {
+        const employee = employees.find(e => e.uid === payment.guardId);
+        if (employee) {
+            setReceiptEmployee(employee);
+            setSelectedPayment(payment);
+            setShowReceiptModal(true);
+        } else {
+            toast.error('Employee details not found');
         }
     };
 
@@ -158,7 +222,10 @@ export const AdminSalaryPage: React.FC = () => {
                         <h1 className="text-2xl font-bold text-gray-900">Salary Management</h1>
                         <p className="text-gray-600">Review and process employee and staff salary requests</p>
                     </div>
-                    <Button onClick={() => setShowPaymentModal(true)}>
+                    <Button onClick={() => {
+                        setSelectedPayment(null);
+                        setShowPaymentModal(true);
+                    }}>
                         <Plus size={20} className="mr-2" />
                         Pay Salary
                     </Button>
@@ -272,12 +339,24 @@ export const AdminSalaryPage: React.FC = () => {
                                             </Button>
                                         )}
                                         {payment.status === 'approved' && (
-                                            <Button size="sm" variant="secondary" onClick={() => handleMarkPaid(payment.id)}>
-                                                Mark Paid
+                                            <Button size="sm" variant="secondary" onClick={() => {
+                                                setSelectedPayment(payment);
+                                                setShowPaymentModal(true);
+                                            }}>
+                                                Pay Now
                                             </Button>
                                         )}
                                         {payment.status === 'paid' && (
-                                            <span className="text-xs text-green-600 font-medium mr-2">Paid on {new Date(payment.paidAt!).toLocaleDateString()}</span>
+                                            <div className="inline-flex items-center gap-2">
+                                                <span className="text-xs text-green-600 font-medium">Paid on {new Date(payment.paidAt!).toLocaleDateString()}</span>
+                                                <button
+                                                    onClick={() => handleViewReceipt(payment)}
+                                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                                    title="View Receipt"
+                                                >
+                                                    <FileText size={16} />
+                                                </button>
+                                            </div>
                                         )}
                                         <button
                                             onClick={() => handleDeleteSalary(payment.id)}
@@ -300,8 +379,23 @@ export const AdminSalaryPage: React.FC = () => {
                     <DirectPaymentModal
                         isOpen={showPaymentModal}
                         onClose={() => setShowPaymentModal(false)}
-                        onSubmit={handleDirectPayment}
+                        onSubmit={(data) => handleDirectPayment(selectedPayment?.id || null, data)}
                         employees={employees}
+                        initialData={selectedPayment ? {
+                            employeeId: selectedPayment.guardId,
+                            amount: selectedPayment.amount,
+                            month: selectedPayment.month,
+                            notes: selectedPayment.notes || ''
+                        } : undefined}
+                    />
+                )}
+
+                {showReceiptModal && selectedPayment && receiptEmployee && (
+                    <SalaryReceiptModal
+                        isOpen={showReceiptModal}
+                        onClose={() => setShowReceiptModal(false)}
+                        payment={selectedPayment}
+                        employee={receiptEmployee}
                     />
                 )}
             </div>
@@ -314,12 +408,19 @@ const DirectPaymentModal: React.FC<{
     onClose: () => void;
     onSubmit: (data: any) => void;
     employees: UserType[];
-}> = ({ isOpen, onClose, onSubmit, employees }) => {
+    initialData?: {
+        employeeId: string;
+        amount: number;
+        month: string;
+        notes: string;
+    }
+}> = ({ isOpen, onClose, onSubmit, employees, initialData }) => {
     const [formData, setFormData] = useState({
-        employeeId: '',
-        amount: 0,
-        month: new Date().toISOString().substring(0, 7), // YYYY-MM
-        notes: ''
+        employeeId: initialData?.employeeId || '',
+        amount: initialData?.amount || 0,
+        month: initialData?.month || new Date().toISOString().substring(0, 7), // YYYY-MM
+        notes: initialData?.notes || '',
+        paymentMethod: 'razorpay'
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -328,18 +429,18 @@ const DirectPaymentModal: React.FC<{
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Direct Salary Payment">
+        <Modal isOpen={isOpen} onClose={onClose} title={initialData ? "Process Salary Payment" : "Direct Salary Payment"}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700">Select Employee</label>
                     <select
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
                         value={formData.employeeId}
                         onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
                         required
+                        disabled={!!initialData}
                     >
                         <option value="">Select an employee...</option>
-                        {/* Grouping by role */}
                         <optgroup label="Security Guards">
                             {employees.filter(e => e.role === 'security').map(emp => (
                                 <option key={emp.uid} value={emp.uid}>
@@ -362,21 +463,50 @@ const DirectPaymentModal: React.FC<{
                         <label className="block text-sm font-medium text-gray-700">Amount (₹)</label>
                         <input
                             type="number"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
                             value={formData.amount === 0 ? '' : formData.amount}
                             onChange={(e) => setFormData({ ...formData, amount: parseInt(e.target.value) || 0 })}
                             required
+                            disabled={!!initialData}
                         />
                     </div>
                     <div className="space-y-1">
                         <label className="block text-sm font-medium text-gray-700">Salary Month</label>
                         <input
                             type="month"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
                             value={formData.month}
                             onChange={(e) => setFormData({ ...formData, month: e.target.value })}
                             required
+                            disabled={!!initialData}
                         />
+                    </div>
+                </div>
+
+                <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        {['razorpay', 'bypass'].map((method) => (
+                            <label
+                                key={method}
+                                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${formData.paymentMethod === method
+                                    ? 'border-indigo-600 bg-indigo-50'
+                                    : 'border-gray-200 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="paymentMethod"
+                                    value={method}
+                                    checked={formData.paymentMethod === method}
+                                    onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                                    className="w-4 h-4 text-indigo-600"
+                                />
+                                <span className="ml-3 text-sm font-medium capitalize">
+                                    {method === 'bypass' ? 'Bypass (Mock)' : method}
+                                </span>
+                            </label>
+                        ))}
                     </div>
                 </div>
 
@@ -385,7 +515,7 @@ const DirectPaymentModal: React.FC<{
                     <textarea
                         className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
                         rows={3}
-                        placeholder="Payment details (e.g., Cash, UTR No.)"
+                        placeholder="Payment details or internal notes"
                         value={formData.notes}
                         onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     />
@@ -393,7 +523,9 @@ const DirectPaymentModal: React.FC<{
 
                 <div className="flex gap-3 pt-4">
                     <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
-                    <Button type="submit" className="flex-1">Record Payment</Button>
+                    <Button type="submit" className="flex-1">
+                        {formData.paymentMethod === 'bypass' ? 'Record Payment' : 'Pay via Razorpay'}
+                    </Button>
                 </div>
             </form>
         </Modal>
