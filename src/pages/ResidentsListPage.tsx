@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { Users, Search, Phone, Mail, Home, Shield, UserPlus } from 'lucide-react';
-import { UserService } from '@/services/supabase.service';
+import { UserService, toCamel } from '@/services/supabase.service';
 import { User } from '@/types';
+import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import { Card, StatsCard } from '@/components/common';
@@ -11,6 +12,8 @@ export const ResidentsListPage: React.FC = () => {
     const { user } = useAuthStore();
     const [residents, setResidents] = useState<User[]>([]);
     const [filteredResidents, setFilteredResidents] = useState<User[]>([]);
+    const [flats, setFlats] = useState<any[]>([]);
+    const [buildings, setBuildings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<string>('all');
@@ -28,7 +31,16 @@ export const ResidentsListPage: React.FC = () => {
 
         try {
             setLoading(true);
-            const data = await UserService.getUsers(user.societyId) as User[];
+            const [userData, flatsData, buildingsData] = await Promise.all([
+                UserService.getUsers(user.societyId),
+                supabase.from('flats').select('*').eq('society_id', user.societyId),
+                supabase.from('buildings').select('*').eq('society_id', user.societyId)
+            ]);
+
+            setFlats(toCamel(flatsData.data || []));
+            setBuildings(toCamel(buildingsData.data || []));
+
+            const data = userData as User[];
             // Filter out security guards (show only owners, tenants, admins)
             const filteredData = data.filter((u: User) => u.role !== 'security');
             setResidents(filteredData);
@@ -206,9 +218,16 @@ export const ResidentsListPage: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700">
                                                 {resident.flatIds?.length ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                                        {resident.flatIds.length} Property Mapped
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {resident.flatIds.map(flatId => {
+                                                            const flat = flats.find(f => f.id === flatId);
+                                                            const building = buildings.find(b => b.id === flat?.buildingId);
+                                                            return flat ? (
+                                                                <span key={flatId} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs">
+                                                                    {building ? `${building.name} - ` : ''}{flat.flatNumber}
+                                                                </span>
+                                                            ) : null;
+                                                        })}
                                                     </div>
                                                 ) : (
                                                     <span className="text-gray-400">No flats mapped</span>

@@ -22,6 +22,7 @@ export const VisitorsPage: React.FC = () => {
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'exited'>('all');
   const [gates, setGates] = useState<Gate[]>([]);
+  const [residents, setResidents] = useState<any[]>([]);
   const [showManageGates, setShowManageGates] = useState(false);
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export const VisitorsPage: React.FC = () => {
       loadVisitors();
       loadFlats();
       loadGates();
+      loadResidents();
     }
   }, [user]);
 
@@ -39,6 +41,20 @@ export const VisitorsPage: React.FC = () => {
       setGates(data as Gate[]);
     } catch (error) {
       console.error('Error loading gates:', error);
+    }
+  };
+
+  const loadResidents = async () => {
+    if (!user?.societyId) return;
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('uid, name')
+        .eq('society_id', user.societyId);
+      if (error) throw error;
+      setResidents(data || []);
+    } catch (error) {
+      console.error('Error loading residents:', error);
     }
   };
 
@@ -293,6 +309,7 @@ export const VisitorsPage: React.FC = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Visitor</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flat</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resident</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Purpose</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entry Time</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -324,6 +341,13 @@ export const VisitorsPage: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {flat ? flat.flat_number : visitor.flatId}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {(() => {
+                                if (!flat) return 'N/A';
+                                const host = residents.find(r => r.uid === flat.owner_id || r.uid === flat.tenant_id);
+                                return host ? host.name : 'Unknown';
+                              })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {visitor.purpose}
