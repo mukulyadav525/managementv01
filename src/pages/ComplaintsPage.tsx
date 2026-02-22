@@ -274,7 +274,7 @@ export const ComplaintsPage: React.FC = () => {
                   )}
 
                   {/* Actions */}
-                  {(user?.role === 'admin' || user?.role === 'staff') && complaint.status !== 'resolved' && (
+                  {(user?.role === 'admin' || user?.role === 'staff' || user?.role === 'security') && complaint.status !== 'resolved' && (
                     <div className="flex gap-2 pt-2 border-t">
                       {complaint.status === 'open' && (
                         <Button
@@ -379,8 +379,8 @@ const AddComplaintModal: React.FC<{
         <ResidenceSelector
           initialFlatId={formData.flatId}
           onSelect={(flatId, _, floor) => setFormData({ ...formData, flatId, floor })}
-          restrictedToUserFlats={user?.role !== 'admin' && user?.role !== 'staff'}
-          showResidentInfo={user?.role === 'admin' || user?.role === 'staff'}
+          restrictedToUserFlats={user?.role !== 'admin' && user?.role !== 'staff' && user?.role !== 'security'}
+          showResidentInfo={user?.role === 'admin' || user?.role === 'staff' || user?.role === 'security'}
         />
 
 
