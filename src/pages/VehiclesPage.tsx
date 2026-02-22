@@ -136,11 +136,12 @@ export const VehiclesPage: React.FC = () => {
     const handleSaveVehicle = async (formData: any) => {
         if (!user?.societyId) return;
         try {
+            const { floor, ...cleanFormData } = formData;
             const vehicleData = {
-                ...formData,
+                ...cleanFormData,
                 societyId: user.societyId,
-                userId: formData.userId || null,
-                flatId: formData.flatId || null,
+                userId: cleanFormData.userId || null,
+                flatId: cleanFormData.flatId || null,
                 updatedAt: new Date().toISOString()
             };
 
