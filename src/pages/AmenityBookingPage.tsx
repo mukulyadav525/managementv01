@@ -4,6 +4,9 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
+import { SocietyService } from '@/services/supabase.service';
+import { formatFlatName } from '@/utils/flat.utils';
+import { Building } from '@/types';
 
 import {
     Amenity,
@@ -20,6 +23,9 @@ export const AmenityBookingPage: React.FC = () => {
     const [bookingModalAmenity, setBookingModalAmenity] = useState<Amenity | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState<any>({});
+    const [view, setView] = useState<'mine' | 'all'>(user?.role === 'admin' ? 'all' : 'mine');
+    const [buildings, setBuildings] = useState<Building[]>([]);
+    const [detailedBookings, setDetailedBookings] = useState<any[]>([]);
 
     useEffect(() => {
         if (user?.societyId) {
@@ -30,16 +36,51 @@ export const AmenityBookingPage: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [amenitiesData, bookingsData] = await Promise.all([
+            const promises: any[] = [
                 AmenityService.getAmenities(user!.societyId),
-                AmenityService.getBookings(user!.societyId)
-            ]);
+                AmenityService.getBookings(user!.societyId),
+                SocietyService.getBuildings(user!.societyId)
+            ];
+
+            if (user?.role === 'admin') {
+                promises.push(AmenityService.getDetailedBookings(user!.societyId));
+            }
+
+            const [amenitiesData, bookingsData, buildingsData, detailedData] = await Promise.all(promises);
+
             setAmenities(amenitiesData as Amenity[]);
             setAllBookings(bookingsData as any[]);
+            setBuildings(buildingsData as Building[]);
+            if (detailedData) {
+                setDetailedBookings(detailedData as any[]);
+            }
         } catch (error) {
+            console.error('Error loading amenities:', error);
             toast.error('Failed to load amenities');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleUpdateStatus = async (bookingId: string, status: string) => {
+        try {
+            await AmenityService.updateBooking(bookingId, { status });
+            toast.success(`Booking status updated to ${status}`);
+            loadData();
+        } catch (error) {
+            toast.error('Failed to update status');
+        }
+    };
+
+    const handleCancelBooking = async (bookingId: string) => {
+        if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+
+        try {
+            await AmenityService.updateBooking(bookingId, { status: 'cancelled' });
+            toast.success('Booking cancelled');
+            loadData();
+        } catch (error) {
+            toast.error('Failed to cancel booking');
         }
     };
 
@@ -162,10 +203,22 @@ export const AmenityBookingPage: React.FC = () => {
                                 Add Amenity
                             </Button>
                         )}
-                        <Button variant="secondary" className="flex items-center gap-2">
-                            <Calendar size={18} />
-                            My Bookings
-                        </Button>
+                        <div className="flex bg-gray-100 p-1 rounded-xl">
+                            <button
+                                onClick={() => setView('mine')}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${view === 'mine' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                My Bookings
+                            </button>
+                            {user?.role === 'admin' && (
+                                <button
+                                    onClick={() => setView('all')}
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${view === 'all' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    All Bookings
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -265,20 +318,24 @@ export const AmenityBookingPage: React.FC = () => {
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                             <Clock className="text-primary-600" size={24} />
-                            My Bookings
+                            {view === 'mine' ? 'My Bookings' : 'All Society Bookings'}
                         </h2>
                         <Card className="h-full">
-                            {allBookings.filter(b => b.userId === user?.uid).length === 0 ? (
+                            {(view === 'mine' ? allBookings.filter(b => b.userId === user?.uid) : detailedBookings).length === 0 ? (
                                 <div className="p-10 text-center flex flex-col items-center justify-center">
                                     <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mb-4">
                                         <Info className="text-gray-300" size={24} />
                                     </div>
-                                    <h4 className="font-bold text-gray-700">No personal bookings</h4>
-                                    <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">Your facility reservations will appear here. Start by selecting an amenity.</p>
+                                    <h4 className="font-bold text-gray-700">{view === 'mine' ? 'No personal bookings' : 'No society bookings'}</h4>
+                                    <p className="text-sm text-gray-500 max-w-xs mx-auto mt-2">
+                                        {view === 'mine'
+                                            ? 'Your facility reservations will appear here. Start by selecting an amenity.'
+                                            : 'No bookings have been made for any amenities in the society yet.'}
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="divide-y divide-gray-50">
-                                    {allBookings.filter(b => b.userId === user?.uid).map(booking => (
+                                    {(view === 'mine' ? allBookings.filter(b => b.userId === user?.uid) : detailedBookings).map(booking => (
                                         <div key={booking.id} className="p-4 hover:bg-gray-50 transition-colors">
                                             <div className="flex items-start gap-4">
                                                 <div className="bg-primary-50 p-3 rounded-2xl text-primary-600">
@@ -288,10 +345,39 @@ export const AmenityBookingPage: React.FC = () => {
                                                     <div className="flex items-center justify-between mb-1">
                                                         <h4 className="font-bold text-gray-900 truncate">
                                                             {amenities.find(a => a.id === booking.amenityId)?.name || 'Amenity'}
+                                                            {view === 'all' && booking.user && (
+                                                                <span className="ml-2 text-xs font-normal text-gray-500">
+                                                                    by {booking.user.name} ({formatFlatName(booking.flat?.flatNumber || '', buildings.find(b => b.id === booking.flat?.buildingId)?.name)})
+                                                                </span>
+                                                            )}
                                                         </h4>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                            {booking.status}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {user?.role === 'admin' ? (
+                                                                <select
+                                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border-none focus:ring-0 cursor-pointer ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : (booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700')}`}
+                                                                    value={booking.status}
+                                                                    onChange={(e) => handleUpdateStatus(booking.id, e.target.value)}
+                                                                >
+                                                                    <option value="pending">Pending</option>
+                                                                    <option value="confirmed">Confirmed</option>
+                                                                    <option value="completed">Completed</option>
+                                                                    <option value="cancelled">Cancelled</option>
+                                                                </select>
+                                                            ) : (
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' : (booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700')}`}>
+                                                                    {booking.status}
+                                                                </span>
+                                                            )}
+                                                            {(user?.role === 'admin' || booking.userId === user?.uid) && booking.status === 'confirmed' && (
+                                                                <button
+                                                                    onClick={() => handleCancelBooking(booking.id)}
+                                                                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                                                                    title="Cancel Booking"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <div className="flex flex-col gap-1 text-xs text-gray-500">
                                                         <div className="flex items-center gap-1.5">
@@ -304,6 +390,9 @@ export const AmenityBookingPage: React.FC = () => {
                                                                 {new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         </div>
+                                                        {booking.notes && (
+                                                            <p className="mt-1 italic truncate">"{booking.notes}"</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <ChevronRight className="text-gray-300" size={20} />
@@ -313,7 +402,6 @@ export const AmenityBookingPage: React.FC = () => {
                                 </div>
                             )}
                         </Card>
-
                         {/* Booking Rules Card */}
                         <Card className="bg-slate-900 text-white p-6 border-none">
                             <h4 className="font-bold text-lg mb-4 flex items-center gap-2">

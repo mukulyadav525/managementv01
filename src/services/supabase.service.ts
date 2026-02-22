@@ -630,6 +630,29 @@ export class AmenityService extends SupabaseService {
     static async createBooking(data: any) {
         return this.createDocument(`amenity_bookings`, data);
     }
+
+    static async updateBooking(bookingId: string, data: any) {
+        return this.updateDocument(`amenity_bookings`, bookingId, data);
+    }
+
+    static async deleteBooking(bookingId: string) {
+        return this.deleteDocument(`amenity_bookings`, bookingId);
+    }
+
+    static async getDetailedBookings(societyId: string) {
+        const { data, error } = await supabase
+            .from('amenity_bookings')
+            .select(`
+                *,
+                user:users(uid, name, email),
+                flat:flats(id, flat_number, building_id)
+            `)
+            .eq('society_id', societyId)
+            .order('start_time', { ascending: false });
+
+        if (error) throw error;
+        return toCamel(data);
+    }
 }
 
 // Emergency Contact services
