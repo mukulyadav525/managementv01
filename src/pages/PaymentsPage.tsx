@@ -102,9 +102,23 @@ export const PaymentsPage: React.FC = () => {
 
     const totalAmount = payment.amount + (new Date(payment.dueDate) < new Date() ? (payment.fineAmount || 0) : 0);
 
+    const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+    if (!rzpKey || rzpKey === 'rzp_test_placeholder') {
+      console.error('Razorpay Key ID is missing or invalid:', rzpKey);
+      toast.error('Payment system configuration error (Missing API Key). Please contact admin.');
+      return;
+    }
+
+    console.log('Initializing Razorpay with:', {
+      amount: totalAmount,
+      key: rzpKey.substring(0, 8) + '...',
+      paymentId
+    });
+
     const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_placeholder',
-      amount: totalAmount * 100, // Razorpay expects amount in paise
+      key: rzpKey,
+      amount: Math.round(totalAmount * 100), // Razorpay expects amount in paise, ensure integer
       currency: 'INR',
       name: 'Smart Society',
       description: `${payment.type.toUpperCase()} Payment - ${payment.month}`,
