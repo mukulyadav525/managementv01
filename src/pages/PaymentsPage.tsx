@@ -100,6 +100,25 @@ export const PaymentsPage: React.FC = () => {
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return;
 
+    if (method === 'bypass' || method === 'Mock') {
+      try {
+        await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
+        await supabase
+          .from('payments')
+          .update({ transaction_id: `MOCK_${Date.now()}` })
+          .eq('id', paymentId);
+
+        toast.success('Mock payment successful!');
+        loadPayments();
+        setShowPaymentModal(false);
+        return;
+      } catch (error) {
+        console.error('Error in mock payment:', error);
+        toast.error('Failed to complete mock payment');
+        return;
+      }
+    }
+
     const totalAmount = payment.amount + (new Date(payment.dueDate) < new Date() ? (payment.fineAmount || 0) : 0);
 
     const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
@@ -149,25 +168,6 @@ export const PaymentsPage: React.FC = () => {
         color: '#2563eb' // primary-600
       }
     };
-
-    if (method === 'bypass' || method === 'Mock') {
-      try {
-        await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
-        await supabase
-          .from('payments')
-          .update({ transaction_id: `MOCK_${Date.now()}` })
-          .eq('id', paymentId);
-
-        toast.success('Mock payment successful!');
-        loadPayments();
-        setShowPaymentModal(false);
-        return;
-      } catch (error) {
-        console.error('Error in mock payment:', error);
-        toast.error('Failed to complete mock payment');
-        return;
-      }
-    }
 
     try {
       const rzp = new window.Razorpay(options);
