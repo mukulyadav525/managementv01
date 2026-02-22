@@ -171,17 +171,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     console.log('authStore: [completeProfile] Creating profile for UID:', uid);
 
-    // Check if profile already exists to avoid duplicate key error
-    const { data: existingProfile } = await supabase.from('users').select('uid').eq('uid', uid).single();
-
-    let dbError;
-    if (existingProfile) {
-      const { error } = await supabase.from('users').update(toSnake(newUser)).eq('uid', uid);
-      dbError = error;
-    } else {
-      const { error } = await supabase.from('users').insert([toSnake(newUser)]);
-      dbError = error;
-    }
+    // Upsert profile based on uid to avoid race conditions and duplicate key errors
+    const { error: dbError } = await supabase.from('users').upsert(toSnake(newUser), {
+      onConflict: 'email', // The unique constraint is on email
+      ignoreDuplicates: false
+    });
 
     if (dbError) {
       console.error('authStore: [completeProfile] Profile creation error:', dbError);
