@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapPin, Phone, Mail, Edit2, Trash2, Home, UserPlus } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
-import { Button, Card, Modal, ResidenceSelector } from '@/components/common';
+import { Button, Card, Modal } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { UserService, toSnake, SocietyService } from '@/services/supabase.service';
 import { User, Flat } from '@/types';
@@ -83,7 +83,7 @@ export const StaffPage: React.FC = () => {
                 role: formData.staffType === 'security' ? 'security' as any : 'staff' as any,
                 staffType: formData.staffType === 'security' ? 'society_staff' : formData.staffType,
                 staffRole: formData.staffType === 'security' ? 'Security Guard' : formData.staffRole,
-                flatIds: formData.staffType === 'domestic_staff' && formData.mappedFlatId ? [formData.mappedFlatId] : [],
+                flatIds: formData.selectedFlatIds || [],
                 buildingId: formData.buildingId || null,
                 status: editingStaff ? editingStaff.status : 'active',
                 updatedAt: new Date().toISOString()
@@ -344,12 +344,12 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         phone: initialData?.phone || '',
         staffType: initialData?.role === 'security' ? 'security' : (initialData?.staffType || 'society_staff'),
         staffRole: initialData?.staffRole || '',
-        mappedFlatId: initialData?.flatIds?.[0] || '',
-        floor: undefined as number | undefined,
-        buildingId: initialData?.buildingId || ''
+        buildingId: initialData?.buildingId || '',
+        selectedFlatIds: initialData?.flatIds || [] as string[]
     });
 
     const [buildings, setBuildings] = useState<any[]>([]);
+    const [allFlats, setAllFlats] = useState<any[]>([]);
     const { user } = useAuthStore();
 
     const [isCustomRole, setIsCustomRole] = useState(false);
@@ -359,10 +359,16 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
 
     const currentRoles = formData.staffType === 'society_staff' ? societyRoles : domesticRoles;
 
+    // Load buildings & flats
     useEffect(() => {
         if (user?.societyId) {
-            supabase.from('buildings').select('id, name').eq('society_id', user.societyId)
-                .then(({ data }) => setBuildings(data || []));
+            Promise.all([
+                supabase.from('buildings').select('id, name').eq('society_id', user.societyId),
+                supabase.from('flats').select('id, flat_number, floor, building_id').eq('society_id', user.societyId)
+            ]).then(([buildingsRes, flatsRes]) => {
+                setBuildings(buildingsRes.data || []);
+                setAllFlats(flatsRes.data || []);
+            });
         }
     }, [user?.societyId]);
 
@@ -372,6 +378,19 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         }
     }, [initialData, currentRoles]);
 
+    // Flats filtered by selected building
+    const filteredFlats = formData.buildingId
+        ? allFlats.filter(f => f.building_id === formData.buildingId)
+        : allFlats;
+
+    const toggleFlat = (flatId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            selectedFlatIds: prev.selectedFlatIds.includes(flatId)
+                ? prev.selectedFlatIds.filter((id: string) => id !== flatId)
+                : [...prev.selectedFlatIds, flatId]
+        }));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -422,7 +441,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-3 gap-3">
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'security', staffRole: 'Security Guard', mappedFlatId: '' })}
+                            onClick={() => setFormData({ ...formData, staffType: 'security', staffRole: 'Security Guard', selectedFlatIds: [] })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'security'
                                 ? 'bg-green-50 border-green-600 ring-1 ring-green-600'
                                 : 'bg-white border-gray-200 hover:border-green-400'
@@ -433,7 +452,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'society_staff', staffRole: '', mappedFlatId: '' })}
+                            onClick={() => setFormData({ ...formData, staffType: 'society_staff', staffRole: '', selectedFlatIds: [] })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'society_staff'
                                 ? 'bg-primary-50 border-primary-600 ring-1 ring-primary-600'
                                 : 'bg-white border-gray-200 hover:border-primary-400'
@@ -527,32 +546,62 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                     </div>
                 )}
 
-                {/* Domestic Staff: Flat selector */}
-                {formData.staffType === 'domestic_staff' && (
-                    <div className="space-y-4 bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-                        <label className="block text-sm font-medium text-amber-900">Map to Resident Flat</label>
-                        <ResidenceSelector
-                            initialFlatId={formData.mappedFlatId}
-                            onSelect={(flatId, _, floor) => setFormData({ ...formData, mappedFlatId: flatId, floor })}
-                            required={formData.staffType === 'domestic_staff'}
-                        />
+                {/* Staff (Society or Domestic): Building + Multi-Flat selector */}
+                {(formData.staffType === 'society_staff' || formData.staffType === 'domestic_staff') && (
+                    <div className={`space-y-4 p-4 rounded-xl border ${formData.staffType === 'domestic_staff'
+                        ? 'bg-amber-50/50 border-amber-100'
+                        : 'bg-primary-50/50 border-primary-100'
+                        }`}>
+                        <label className={`block text-sm font-medium ${formData.staffType === 'domestic_staff' ? 'text-amber-900' : 'text-primary-900'
+                            }`}>Assign Building & Flat(s)</label>
 
-                        <p className="mt-1 text-xs text-amber-700 italic flex items-center gap-1">
-                            <Home size={12} /> Domestic staff must be assigned to a specific property.
-                        </p>
-                    </div>
-                )}
+                        {/* Building Dropdown */}
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Building</label>
+                            <select
+                                value={formData.buildingId}
+                                onChange={(e) => setFormData({ ...formData, buildingId: e.target.value, selectedFlatIds: [] })}
+                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
+                                required
+                            >
+                                <option value="">Select Building...</option>
+                                {buildings.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
+                            </select>
+                        </div>
 
-                {/* Society Staff: Building + Flat selector */}
-                {formData.staffType === 'society_staff' && (
-                    <div className="space-y-4 bg-primary-50/50 p-4 rounded-xl border border-primary-100">
-                        <label className="block text-sm font-medium text-primary-900">Map to Building / Flat (Optional)</label>
-                        <ResidenceSelector
-                            initialFlatId={formData.mappedFlatId}
-                            onSelect={(flatId, _, floor) => setFormData({ ...formData, mappedFlatId: flatId, floor })}
-                        />
-                        <p className="mt-1 text-xs text-primary-700 italic flex items-center gap-1">
-                            <Home size={12} /> Society staff can work across multiple buildings and flats.
+                        {/* Flat Multi-Select (shown after building is selected) */}
+                        {formData.buildingId && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                    Select Flat(s) {formData.selectedFlatIds.length > 0 && <span className="text-primary-600 font-bold">({formData.selectedFlatIds.length} selected)</span>}
+                                </label>
+                                {filteredFlats.length === 0 ? (
+                                    <p className="text-sm text-gray-400 italic py-2">No flats found in this building.</p>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-white rounded-lg border">
+                                        {filteredFlats.map(flat => (
+                                            <button
+                                                key={flat.id}
+                                                type="button"
+                                                onClick={() => toggleFlat(flat.id)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${formData.selectedFlatIds.includes(flat.id)
+                                                    ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
+                                                    }`}
+                                            >
+                                                {flat.flat_number} {flat.floor ? `(Floor ${flat.floor})` : ''}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <p className={`mt-1 text-xs italic flex items-center gap-1 ${formData.staffType === 'domestic_staff' ? 'text-amber-700' : 'text-primary-700'
+                            }`}>
+                            <Home size={12} /> Staff can work at multiple buildings and flats.
                         </p>
                     </div>
                 )}
