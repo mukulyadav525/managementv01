@@ -107,11 +107,11 @@ export const useAuthStore = create<AuthState>((set) => ({
             }
           }
 
-          // Validate role
+          // Validate role and societyId
           const validRoles = ['admin', 'owner', 'tenant', 'security', 'staff'];
-          if (!user.role || !validRoles.includes(user.role)) {
-            console.error('authStore: Invalid or missing role in profile:', user.role);
-            set({ user: null, loading: false, needsCompletion: true }); // Treat as incomplete to force profile update/fix
+          if (!user.role || !validRoles.includes(user.role) || (!user.societyId && user.role !== 'admin')) {
+            console.warn('authStore: Profile found but incomplete (missing role or societyId):', user.role, user.societyId);
+            set({ user, loading: false, needsCompletion: true });
             return;
           }
 
@@ -263,7 +263,17 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     // Final successfully registration state
-    set({ user: newUser, loading: false, needsCompletion: false });
+    console.log('authStore: [completeProfile] Finalizing state update for UID:', uid);
+    set({ user: { ...newUser, societyId }, loading: false, needsCompletion: false });
+
+    // Safety check: wait a moment and verify profile exists
+    setTimeout(async () => {
+      const { data } = await supabase.from('users').select('uid').eq('uid', uid).single();
+      if (!data) {
+        console.error('authStore: [completeProfile] CRITICAL - Profile not found in DB after completion!');
+      }
+    }, 2000);
+
     console.log('authStore: [completeProfile] Process complete for:', uid);
   },
 
@@ -324,7 +334,17 @@ export const useAuthStore = create<AuthState>((set) => ({
             }
           }
 
-          set({ user, loading: false, needsCompletion: false });
+          // More strict completion check
+          const validRoles = ['admin', 'owner', 'tenant', 'security', 'staff'];
+          const isComplete = user.role && validRoles.includes(user.role) && (user.societyId || user.role === 'admin');
+
+          if (!isComplete) {
+            console.warn('authStore: [INIT] Sync Profile - User found but profile is incomplete.');
+            set({ user, loading: false, needsCompletion: true });
+          } else {
+            console.log('authStore: [INIT] Sync Profile - Success');
+            set({ user, loading: false, needsCompletion: false });
+          }
         }
       } catch (err) {
         console.error('authStore: [INIT] Critical sync error:', err);

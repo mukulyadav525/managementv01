@@ -35,14 +35,24 @@ export const CompleteProfilePage: React.FC = () => {
             if (user?.user_metadata?.full_name) {
                 setFormData(prev => ({ ...prev, name: user.user_metadata.full_name }));
             }
+
+            // Check if profile ALREADY exists and is complete
+            if (user) {
+                const { data: profile } = await supabase.from('users').select('role, society_id').eq('uid', user.id).single();
+                if (profile && profile.role && (profile.society_id || profile.role === 'admin')) {
+                    console.log('CompleteProfilePage: Profile already complete, redirecting...');
+                    navigate('/dashboard');
+                }
+            }
         };
         getUserData();
 
-    }, []);
+    }, [navigate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validate
         if (formData.role === 'admin' && !formData.societyName) {
             return toast.error('Please provide a society name');
         }
@@ -57,18 +67,23 @@ export const CompleteProfilePage: React.FC = () => {
 
         setLoading(true);
         try {
+            console.log('CompleteProfilePage: Submitting profile...', formData);
             await completeProfile({
-                name: formData.name, // Use form name if edited, or pre-filled
+                name: formData.name,
                 phone: formData.phone,
                 role: formData.role,
                 societyId: formData.societyId,
-                societyName: formData.societyName
+                societyName: formData.role === 'admin' ? formData.societyName : undefined
             });
 
             toast.success('Profile completed successfully!');
-            navigate('/dashboard'); // Auth store will update user, DashboardRedirect handles the rest
+
+            // Wait a tiny bit for the store to settle
+            setTimeout(() => {
+                navigate('/dashboard', { replace: true });
+            }, 500);
         } catch (error: any) {
-            console.error(error);
+            console.error('CompleteProfilePage: Error completing profile:', error);
             toast.error(error.message || 'Failed to complete profile');
         } finally {
             setLoading(false);
