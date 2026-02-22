@@ -167,14 +167,17 @@ export const OwnerDashboardPage: React.FC = () => {
                                                 <h3 className="text-lg font-semibold text-gray-900">Flat {flat.flatNumber}</h3>
                                                 <p className="text-sm text-gray-500">{flat.buildingName}</p>
                                             </div>
-                                            <div className={`
-                                                px-2 py-1 rounded text-xs font-medium capitalize
-                                                ${flat.occupancyStatus === 'vacant' ? 'bg-red-100 text-red-700' : ''}
-                                                ${flat.occupancyStatus === 'rented' ? 'bg-green-100 text-green-700' : ''}
-                                                ${flat.occupancyStatus === 'owner-occupied' ? 'bg-blue-100 text-blue-700' : ''}
-                                            `}>
-                                                {flat.occupancyStatus.replace('-', ' ')}
-                                            </div>
+                                            {(() => {
+                                                const s = flat.occupancyStatus;
+                                                const cfg: Record<string, { label: string; cls: string }> = {
+                                                    'unassigned': { label: 'Unassigned', cls: 'bg-gray-100 text-gray-600' },
+                                                    'owner-occupied': { label: 'Owner Occupied', cls: 'bg-blue-100 text-blue-700' },
+                                                    'tenant-occupied': { label: 'Tenant Occupied', cls: 'bg-green-100 text-green-700' },
+                                                    'vacant': { label: 'Vacant', cls: 'bg-yellow-100 text-yellow-700' },
+                                                };
+                                                const { label, cls } = cfg[s] ?? { label: s, cls: 'bg-gray-100 text-gray-600' };
+                                                return <span className={`px-2 py-1 rounded text-xs font-medium ${cls}`}>{label}</span>;
+                                            })()}
                                         </div>
                                         <div className="space-y-1 text-sm text-gray-600 mt-4">
                                             <div className="flex justify-between">

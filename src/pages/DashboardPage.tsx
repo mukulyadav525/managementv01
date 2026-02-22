@@ -70,7 +70,7 @@ export const DashboardPage: React.FC = () => {
       // Load flats for stats
       const flats = await SocietyService.getFlats(user.societyId);
       const totalFlats = flats.length;
-      const occupiedFlats = flats.filter((f: any) => f.occupancyStatus !== 'vacant').length;
+      const occupiedFlats = flats.filter((f: any) => f.occupancyStatus === 'owner-occupied' || f.occupancyStatus === 'tenant-occupied').length;
 
       setStats({
         totalFlats,

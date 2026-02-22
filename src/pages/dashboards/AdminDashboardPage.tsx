@@ -100,7 +100,7 @@ export const AdminDashboardPage: React.FC = () => {
             setFlats(flatsData as Flat[]);
             const totalFlats = flatsData.length;
             const occupiedFlats = flatsData.filter((f: any) =>
-                f.occupancyStatus === 'rented' || f.occupancyStatus === 'owner-occupied'
+                f.occupancyStatus === 'tenant-occupied' || f.occupancyStatus === 'owner-occupied'
             ).length;
             const vacantFlats = totalFlats - occupiedFlats;
 

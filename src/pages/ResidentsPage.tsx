@@ -131,7 +131,7 @@ export const ResidentsPage: React.FC = () => {
             // 2. Clear associations in flats table
             if (ownedFlats && ownedFlats.length > 0) {
                 await supabase.from('flats')
-                    .update({ owner_id: null, occupancy_status: 'vacant' })
+                    .update({ owner_id: null, occupancy_status: 'unassigned' })
                     .in('id', ownedFlats.map(f => f.id));
             }
             if (tenantFlats && tenantFlats.length > 0) {
@@ -187,7 +187,7 @@ export const ResidentsPage: React.FC = () => {
                         flatNumber: formData.flatNumber,
                         buildingId: formData.buildingId,
                         floor: ['owner', 'tenant'].includes(formData.role) ? parseInt(formData.floor) : 1,
-                        occupancyStatus: 'vacant',
+                        occupancyStatus: 'unassigned',
                         bhkType: '2BHK',
                         area: 1200
                     })]);
@@ -206,7 +206,7 @@ export const ResidentsPage: React.FC = () => {
                         .update({
                             owner_id: null,
                             tenant_id: null,
-                            occupancy_status: 'vacant'
+                            occupancy_status: 'unassigned'
                         })
                         .eq('id', oldFlatId);
                 }
@@ -252,7 +252,7 @@ export const ResidentsPage: React.FC = () => {
                     .from('flats')
                     .update({
                         [updateField]: residentData.uid, // Use the synced UID
-                        occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied', // reverted to 'tenant-occupied' for consistency
+                        occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied',
                         building_id: formData.buildingId,
                         floor: parseInt(formData.floor)
                     })

@@ -245,7 +245,7 @@ export class SocietyService extends SupabaseService {
                         floor: floor,
                         bhk_type: '2BHK',
                         area: 1000,
-                        occupancy_status: 'vacant'
+                        occupancy_status: 'unassigned'
                     });
                 }
             }

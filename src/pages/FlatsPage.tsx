@@ -274,7 +274,7 @@ export const FlatsPage: React.FC = () => {
                         <div>
                             <p className="text-sm text-gray-500">Occupied</p>
                             <p className="text-2xl font-bold">
-                                {flats.filter(f => f.occupancyStatus !== 'vacant').length}
+                                {flats.filter(f => f.occupancyStatus === 'owner-occupied' || f.occupancyStatus === 'tenant-occupied').length}
                             </p>
                         </div>
                     </Card>
@@ -283,9 +283,9 @@ export const FlatsPage: React.FC = () => {
                             <Home size={24} />
                         </div>
                         <div>
-                            <p className="text-sm text-gray-500">Vacant</p>
+                            <p className="text-sm text-gray-500">Vacant / Unassigned</p>
                             <p className="text-2xl font-bold">
-                                {flats.filter(f => f.occupancyStatus === 'vacant').length}
+                                {flats.filter(f => f.occupancyStatus === 'vacant' || f.occupancyStatus === 'unassigned' || !f.occupancyStatus).length}
                             </p>
                         </div>
                     </Card>
@@ -343,12 +343,17 @@ export const FlatsPage: React.FC = () => {
                                                 <td className="px-6 py-4">{flat.bhkType}</td>
                                                 <td className="px-6 py-4">{flat.floor}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${flat.occupancyStatus === 'vacant' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                                                        }`}>
-                                                        {flat.occupancyStatus === 'owner-occupied' ? 'Owner Occupied' :
-                                                            flat.occupancyStatus === 'rented' ? 'Tenant Occupied' :
-                                                                'Vacant'}
-                                                    </span>
+                                                    {(() => {
+                                                        const s = flat.occupancyStatus;
+                                                        const cfg: Record<string, { label: string; cls: string }> = {
+                                                            'unassigned': { label: 'Unassigned', cls: 'bg-gray-100 text-gray-600' },
+                                                            'owner-occupied': { label: 'Owner Occupied', cls: 'bg-blue-100 text-blue-700' },
+                                                            'tenant-occupied': { label: 'Tenant Occupied', cls: 'bg-green-100 text-green-700' },
+                                                            'vacant': { label: 'Vacant', cls: 'bg-yellow-100 text-yellow-700' },
+                                                        };
+                                                        const { label, cls } = cfg[s] ?? { label: 'Unassigned', cls: 'bg-gray-100 text-gray-600' };
+                                                        return <span className={`px-2 py-1 rounded text-xs font-medium ${cls}`}>{label}</span>;
+                                                    })()}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {owner ? (
@@ -696,9 +701,10 @@ const FlatModal: React.FC<{
                         onChange={(e) => setFormData({ ...formData, occupancyStatus: e.target.value })}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
                     >
-                        <option value="vacant">Vacant</option>
+                        <option value="unassigned">Unassigned</option>
                         <option value="owner-occupied">Owner Occupied</option>
-                        <option value="rented">Tenant Occupied</option>
+                        <option value="tenant-occupied">Tenant Occupied</option>
+                        <option value="vacant">Vacant</option>
                     </select>
                 </div>
                 <div className="flex gap-3 pt-4">

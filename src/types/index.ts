@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'owner' | 'tenant' | 'security' | 'staff';
 
-export type OccupancyStatus = 'owner-occupied' | 'rented' | 'vacant';
+export type OccupancyStatus = 'unassigned' | 'owner-occupied' | 'tenant-occupied' | 'vacant';
 
 export type PaymentStatus = 'pending' | 'paid' | 'overdue';
 

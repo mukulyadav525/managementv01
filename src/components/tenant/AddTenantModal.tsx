@@ -46,9 +46,9 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
             // We can do deeper validation inside the form.
             return true;
         } else {
-            const isVacantOrOwner = f.occupancyStatus === 'vacant' || f.occupancyStatus === 'owner-occupied';
+            const isAssignable = f.occupancyStatus === 'vacant' || f.occupancyStatus === 'unassigned' || f.occupancyStatus === 'owner-occupied';
             const matchesFloor = selectedFloor ? f.floor.toString() === selectedFloor : true;
-            return isVacantOrOwner && matchesFloor;
+            return isAssignable && matchesFloor;
         }
     });
 
@@ -181,11 +181,11 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                 safeTenants[formData.tenantFloor] = userId;
 
                 flatUpdate.tenants_by_floor = safeTenants;
-                flatUpdate.occupancy_status = 'rented'; // At least 1 tenant exists
+                flatUpdate.occupancy_status = 'tenant-occupied'; // At least 1 tenant exists
                 // Use first tenant as generic reference if needed by old queries
                 flatUpdate.current_tenant_id = Object.values(safeTenants)[0] || null;
             } else {
-                flatUpdate.occupancy_status = 'rented';
+                flatUpdate.occupancy_status = 'tenant-occupied';
                 flatUpdate.current_tenant_id = userId;
             }
 

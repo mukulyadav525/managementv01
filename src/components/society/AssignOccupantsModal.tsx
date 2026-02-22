@@ -81,20 +81,20 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
         }
 
         const finalTenantId = isHouse ? null : (ownerLivesHere ? null : (selectedTenantId || null)); // For towers
-        // Status logic:
-        // - owner lives here → 'owner-occupied'
-        // - owner assigned but doesn't live here + tenant assigned → 'rented'
-        // - owner assigned but doesn't live here + no tenant → 'owner-occupied' (owned, not vacant)
-        // - no owner → 'vacant'
+        // New 4-state occupancy scheme:
+        // unassigned   = no owner assigned
+        // owner-occupied = owner lives here
+        // tenant-occupied = owner doesn't live here + tenant assigned
+        // vacant       = owner assigned, doesn't live here, no tenant
         let newOccupancyStatus: string;
         if (!selectedOwnerId) {
-            newOccupancyStatus = 'vacant';
+            newOccupancyStatus = 'unassigned';
         } else if (ownerLivesHere) {
             newOccupancyStatus = 'owner-occupied';
         } else if (isHouse) {
-            newOccupancyStatus = Object.keys(tenantsByFloor).length > 0 ? 'rented' : 'owner-occupied';
+            newOccupancyStatus = Object.keys(tenantsByFloor).length > 0 ? 'tenant-occupied' : 'vacant';
         } else {
-            newOccupancyStatus = finalTenantId ? 'rented' : 'owner-occupied';
+            newOccupancyStatus = finalTenantId ? 'tenant-occupied' : 'vacant';
         }
 
         setLoading(true);
