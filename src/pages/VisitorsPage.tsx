@@ -399,22 +399,27 @@ export const VisitorsPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2 flex items-center">
-                              {visitor.status === 'pending' && (
-                                <>
-                                  <button
-                                    onClick={() => handleApprove(visitor.id)}
-                                    className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded hover:bg-green-200"
-                                  >
-                                    Approve
-                                  </button>
-                                  <button
-                                    onClick={() => handleReject(visitor.id)}
-                                    className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded hover:bg-red-200"
-                                  >
-                                    Reject
-                                  </button>
-                                </>
-                              )}
+                              {visitor.status === 'pending' && (() => {
+                                const flatInfo = flats.find(f => f.id === visitor.flatId);
+                                const isHost = flatInfo && (user?.uid === flatInfo.owner_id || user?.uid === flatInfo.tenant_id);
+                                const canApprove = user?.role === 'admin' || isHost;
+                                return canApprove;
+                              })() && (
+                                  <>
+                                    <button
+                                      onClick={() => handleApprove(visitor.id)}
+                                      className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded hover:bg-green-200"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      onClick={() => handleReject(visitor.id)}
+                                      className="px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
                               {visitor.status === 'approved' && !visitor.exitTime && (
                                 <button
                                   onClick={() => handleCheckout(visitor.id)}
