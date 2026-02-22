@@ -63,9 +63,9 @@ export const DocumentsPage: React.FC = () => {
             await DocumentService.createDocumentEx({
                 ...formData,
                 societyId: user!.societyId,
-                category: activeTab, // Use current tab (society or personal)
-                uploadedBy: user!.name,
-                ownerId: activeTab === 'personal' ? user!.uid : undefined
+                category: activeTab,
+                uploadedBy: user!.uid, // Use UUID
+                ownerId: activeTab === 'personal' ? user!.uid : undefined // Use UUID
             });
 
             toast.success('Document uploaded successfully');
@@ -150,9 +150,14 @@ export const DocumentsPage: React.FC = () => {
                                                 <FileText size={24} />
                                             </div>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg">
+                                                <a
+                                                    href={doc.fileUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg"
+                                                >
                                                     <Eye size={16} />
-                                                </button>
+                                                </a>
                                                 <button
                                                     onClick={() => handleDelete(doc.id)}
                                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
@@ -167,8 +172,12 @@ export const DocumentsPage: React.FC = () => {
                                             <h4 className="font-bold text-gray-900 leading-tight mb-1 truncate" title={doc.name}>{doc.name}</h4>
                                             <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-4">
                                                 <span>{doc.docType}</span>
-                                                <span>•</span>
-                                                <span>{doc.fileSize}</span>
+                                                {doc.fileSize && (
+                                                    <>
+                                                        <span>•</span>
+                                                        <span>{doc.fileSize}</span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
@@ -178,6 +187,8 @@ export const DocumentsPage: React.FC = () => {
                                             </div>
                                             <a
                                                 href={doc.fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
                                                 className="p-2 bg-slate-900 text-white hover:bg-primary-600 rounded-xl transition-all shadow-md shadow-slate-200"
                                             >
                                                 <Download size={16} />
@@ -230,7 +241,7 @@ export const DocumentsPage: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-700 mb-1">Doc Type</label>
                                         <input
@@ -240,17 +251,6 @@ export const DocumentsPage: React.FC = () => {
                                             className="w-full px-4 py-2 border rounded-xl"
                                             value={formData.docType || ''}
                                             onChange={(e) => setFormData({ ...formData, docType: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-1">File Size</label>
-                                        <input
-                                            placeholder="e.g. 1.2 MB"
-                                            required
-                                            type="text"
-                                            className="w-full px-4 py-2 border rounded-xl"
-                                            value={formData.fileSize || ''}
-                                            onChange={(e) => setFormData({ ...formData, fileSize: e.target.value })}
                                         />
                                     </div>
                                 </div>

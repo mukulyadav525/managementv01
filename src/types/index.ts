@@ -421,7 +421,7 @@ export interface Document {
   name: string;
   category: 'society' | 'personal';
   docType: string;
-  fileSize: string;
+  fileSize?: string;
   fileUrl: string;
   isPublic: boolean;
   uploadedBy: string;
