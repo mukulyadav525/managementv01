@@ -5,7 +5,7 @@ import { Card, Button, StatsCard } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import toast from 'react-hot-toast';
 
-import { PollService } from '@/services/supabase.service';
+import { PollService, UserService } from '@/services/supabase.service';
 import { Poll } from '@/types';
 
 export const PollsPage: React.FC = () => {
@@ -14,6 +14,7 @@ export const PollsPage: React.FC = () => {
     const [polls, setPolls] = useState<Poll[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [totalResidents, setTotalResidents] = useState(0);
     const [formData, setFormData] = useState<any>({
         category: 'general'
     });
@@ -21,8 +22,18 @@ export const PollsPage: React.FC = () => {
     useEffect(() => {
         if (user?.societyId) {
             loadPolls();
+            loadResidentCount();
         }
     }, [user]);
+
+    const loadResidentCount = async () => {
+        try {
+            const residents = await UserService.getUsers(user!.societyId);
+            setTotalResidents(residents.length);
+        } catch (error) {
+            console.error('Failed to load resident count');
+        }
+    };
 
     const loadPolls = async () => {
         setLoading(true);
@@ -124,7 +135,12 @@ export const PollsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <StatsCard title="Active Polls" value={polls.filter(p => p.status === 'active').length} icon={Vote} color="blue" />
                     <StatsCard title="Total Votes Cast" value={polls.reduce((acc, p) => acc + (p.totalVotes || 0), 0)} icon={CheckCircle2} color="green" />
-                    <StatsCard title="Participation Rate" value="78%" icon={Users} color="purple" />
+                    <StatsCard
+                        title="Participation Rate"
+                        value={`${totalResidents > 0 ? Math.round((polls.reduce((acc, p) => acc + (p.totalVotes || 0), 0) / (totalResidents * Math.max(polls.length, 1))) * 100) : 0}%`}
+                        icon={Users}
+                        color="purple"
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
