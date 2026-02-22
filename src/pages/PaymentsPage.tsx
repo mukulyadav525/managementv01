@@ -88,10 +88,26 @@ export const PaymentsPage: React.FC = () => {
     if (!user?.societyId) return;
 
     try {
-      const flatId = user.role === 'admin' ? undefined : user.flatIds?.[0];
-      const data = await PaymentService.getPayments(user.societyId, flatId);
-      setPayments(data as Payment[]);
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('society_id', user.societyId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Filter for roles that should only see THEIR payments
+      let filteredData = data;
+      if (user.role !== 'admin' && user.role !== 'security') {
+        filteredData = data.filter(p =>
+          p.user_id === user.uid ||
+          (user.flatIds && user.flatIds.includes(p.flat_id))
+        );
+      }
+
+      setPayments(toCamel(filteredData) as Payment[]);
     } catch (error) {
+      console.error('Error loading payments:', error);
       toast.error('Failed to load payments');
     }
   };

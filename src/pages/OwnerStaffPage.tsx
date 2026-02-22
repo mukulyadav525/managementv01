@@ -161,24 +161,33 @@ export const OwnerStaffPage: React.FC = () => {
         if (!user || !showPaymentModal.staff) return;
         try {
             setLoading(true);
+
+            // Check if this is a domestic staff mapped to owner
+            const isDomestic = showPaymentModal.staff.staffType === 'domestic_staff';
+
             await SalaryPaymentService.createSalaryRequest({
                 societyId: user.societyId,
-                guardId: showPaymentModal.staff.uid,
+                guardId: showPaymentModal.staff.uid, // guard_id is used for both guard and staff in this table
                 amount: formData.amount,
                 month: formData.month,
-                status: 'paid',
+                status: 'paid', // Owners pay directly
                 requestedAt: new Date().toISOString(),
                 paidAt: new Date().toISOString(),
                 approvedAt: new Date().toISOString(),
                 approvedBy: user.uid,
-                notes: `Paid by Resident: ${user.name}${formData.notes ? ` - ${formData.notes}` : ''}`
+                paymentMethod: formData.paymentMethod || 'cash',
+                transactionId: formData.transactionId || null,
+                notes: isDomestic
+                    ? `Paid by Owner: ${user.name}${formData.notes ? ` - ${formData.notes}` : ''}`
+                    : `Salary Payment: ${formData.notes || ''}`
             });
+
             toast.success(`Salary paid to ${showPaymentModal.staff.name}`);
             setShowPaymentModal({ isOpen: false, staff: null });
             loadData();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Salary payment error:', error);
-            toast.error('Failed to process payment. Please check your permissions.');
+            toast.error(error.message || 'Failed to process payment. Please check your permissions.');
         } finally {
             setLoading(false);
         }
@@ -354,8 +363,8 @@ export const OwnerStaffPage: React.FC = () => {
                                             type="button"
                                             onClick={() => setHelpType(type)}
                                             className={`px-3 py-2 text-sm rounded-lg border transition-colors ${helpType === type
-                                                    ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'
-                                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'
+                                                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                                 }`}
                                         >
                                             {type}
@@ -435,6 +444,8 @@ export const OwnerStaffPage: React.FC = () => {
                             handlePaySalary({
                                 amount: parseInt(formData.get('amount') as string),
                                 month: formData.get('month'),
+                                paymentMethod: formData.get('paymentMethod'),
+                                transactionId: formData.get('transactionId'),
                                 notes: formData.get('notes')
                             });
                         }} className="space-y-4">
@@ -469,12 +480,35 @@ export const OwnerStaffPage: React.FC = () => {
                                     />
                                 </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-medium text-gray-700">Payment Method</label>
+                                    <select
+                                        name="paymentMethod"
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-green-500"
+                                        required
+                                    >
+                                        <option value="cash">Cash</option>
+                                        <option value="upi">UPI</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-medium text-gray-700">Ref/Trans ID (Optional)</label>
+                                    <input
+                                        name="transactionId"
+                                        type="text"
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-green-500"
+                                        placeholder="T24..."
+                                    />
+                                </div>
+                            </div>
                             <div className="space-y-1">
                                 <label className="block text-sm font-medium text-gray-700">Notes (Optional)</label>
                                 <textarea
                                     name="notes"
                                     className="w-full px-3 py-2 border rounded-lg focus:ring-green-500"
-                                    placeholder="Payment reference, mode, etc."
+                                    placeholder="Any additional details..."
                                     rows={2}
                                 />
                             </div>

@@ -201,6 +201,10 @@ export class SocietyService extends SupabaseService {
         return this.updateDocument(`buildings`, buildingId, data);
     }
 
+    static async getBuilding(buildingId: string) {
+        return this.getDocument(`buildings`, buildingId);
+    }
+
     static async deleteBuilding(buildingId: string) {
         return this.deleteDocument(`buildings`, buildingId);
     }

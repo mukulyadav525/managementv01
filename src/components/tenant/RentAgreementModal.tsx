@@ -83,9 +83,13 @@ export const RentAgreementModal: React.FC<RentAgreementModalProps> = ({
                     throw new Error('Failed to fetch details for agreement generation');
                 }
 
+                // UserService.getUser returns a User object which uses 'uid' not 'id'
+                // But the RentAgreement record in DB needs ids. 
+                // Let's ensure we are using the correct properties.
+
                 let building: Building | undefined;
                 if ((flat as Flat).buildingId) {
-                    building = await SocietyService.getDocument('buildings', (flat as Flat).buildingId) as Building;
+                    building = await SocietyService.getBuilding((flat as Flat).buildingId) as Building;
                 }
 
                 const pdfBlob = generateRentAgreementPDF({
