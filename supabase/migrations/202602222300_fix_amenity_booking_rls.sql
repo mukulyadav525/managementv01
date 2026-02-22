@@ -7,6 +7,9 @@ DROP POLICY IF EXISTS "user_read_own_bookings" ON public.amenity_bookings;
 DROP POLICY IF EXISTS "user_insert_own_bookings" ON public.amenity_bookings;
 DROP POLICY IF EXISTS "admin_manage_society_bookings" ON public.amenity_bookings;
 DROP POLICY IF EXISTS "user_manage_own_bookings" ON public.amenity_bookings;
+DROP POLICY IF EXISTS "user_update_own_bookings" ON public.amenity_bookings;
+DROP POLICY IF EXISTS "user_delete_own_bookings" ON public.amenity_bookings;
+DROP POLICY IF EXISTS "management_manage_society_bookings" ON public.amenity_bookings;
 
 -- Step 2: Create robust policies
 
