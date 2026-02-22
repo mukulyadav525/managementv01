@@ -236,11 +236,14 @@ export const ResidentsPage: React.FC = () => {
                 const password = generateTempPassword();
                 const { registerByAdmin } = useAuthStore.getState();
 
-                await registerByAdmin(formData.email, password, {
+                // Capture the actual UID created by auth system
+                const createdUid = await registerByAdmin(formData.email, password, {
                     ...residentData,
                     societyId: user.societyId
                 });
 
+                // Crucial: Use the returned UID for subsequent operations (like flat updates)
+                residentData.uid = createdUid;
                 setGeneratedCredentials({ email: formData.email, password });
             }
 
@@ -249,7 +252,7 @@ export const ResidentsPage: React.FC = () => {
                 const { error: flatError } = await supabase
                     .from('flats')
                     .update({
-                        [updateField]: residentUid,
+                        [updateField]: residentData.uid, // Use the synced UID
                         occupancy_status: formData.role === 'owner' ? 'owner-occupied' : 'tenant-occupied', // reverted to 'tenant-occupied' for consistency
                         building_id: formData.buildingId,
                         floor: parseInt(formData.floor)

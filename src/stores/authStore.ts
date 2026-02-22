@@ -18,7 +18,7 @@ interface AuthState {
   needsCompletion: boolean;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
-  registerByAdmin: (email: string, password: string, userData: Partial<User>) => Promise<void>;
+  registerByAdmin: (email: string, password: string, userData: Partial<User>) => Promise<string>;
 }
 
 
@@ -405,11 +405,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       // 3. Send automated email (non-blocking)
+      console.log('authStore: [ADMIN_REG] Dispatching email to:', email);
       EmailService.sendRegistrationEmail(email, password, userData.name || 'New User')
-        .catch(err => console.error('authStore: Email dispatch failed:', err));
+        .then(() => console.log('authStore: [ADMIN_REG] Email process initiated'))
+        .catch(err => console.error('authStore: [ADMIN_REG] Email dispatch failed:', err));
 
       console.log('authStore: [ADMIN_REG] Process complete for:', uid);
       set({ loading: false });
+      return uid; // Return the actual UID for use in the UI
     } catch (error: any) {
       console.error('authStore: [ADMIN_REG] Critical error:', error);
       set({ error: error.message, loading: false });
