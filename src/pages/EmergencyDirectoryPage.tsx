@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Phone, Shield, LifeBuoy, Heart, Wrench, Search, MapPin, Plus, Trash2, X } from 'lucide-react';
+import { Phone, Shield, LifeBuoy, Heart, Wrench, Search, MapPin, Plus, Trash2, X, Edit2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, Button } from '@/components/common';
-import { EmergencyService } from '@/services/supabase.service';
+import { EmergencyService, SocietyService } from '@/services/supabase.service';
 import { useAuthStore } from '@/stores/authStore';
 import { EmergencyContact } from '@/types';
 import toast from 'react-hot-toast';
@@ -14,6 +14,8 @@ export const EmergencyDirectoryPage: React.FC = () => {
     const [contacts, setContacts] = useState<EmergencyContact[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [editingContact, setEditingContact] = useState<EmergencyContact | null>(null);
+    const [society, setSociety] = useState<any>(null);
     const [formData, setFormData] = useState<any>({
         category: 'society'
     });
@@ -21,8 +23,18 @@ export const EmergencyDirectoryPage: React.FC = () => {
     React.useEffect(() => {
         if (user?.societyId) {
             loadContacts();
+            loadSociety();
         }
     }, [user]);
+
+    const loadSociety = async () => {
+        try {
+            const data = await SocietyService.getSociety(user!.societyId);
+            setSociety(data);
+        } catch (error) {
+            console.error('Failed to load society info');
+        }
+    };
 
     const loadContacts = async () => {
         setLoading(true);
@@ -57,17 +69,23 @@ export const EmergencyDirectoryPage: React.FC = () => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            await EmergencyService.createContact({
-                ...formData,
-                societyId: user!.societyId
-            });
+            if (editingContact) {
+                await EmergencyService.updateContact(editingContact.id, formData);
+                toast.success('Contact updated');
+            } else {
+                await EmergencyService.createContact({
+                    ...formData,
+                    societyId: user!.societyId
+                });
+                toast.success('Contact added successfully');
+            }
 
-            toast.success('Contact added successfully');
             setShowModal(false);
+            setEditingContact(null);
             setFormData({ category: 'society' });
             loadContacts();
         } catch (error) {
-            toast.error('Failed to add contact');
+            toast.error(editingContact ? 'Update failed' : 'Addition failed');
         } finally {
             setSubmitting(false);
         }
@@ -102,7 +120,7 @@ export const EmergencyDirectoryPage: React.FC = () => {
                         <p className="text-gray-600 mt-1">Quick access to essential services and society helpdesk</p>
                     </div>
                     {user?.role === 'admin' && (
-                        <Button onClick={() => setShowModal(true)} className="flex items-center gap-2">
+                        <Button onClick={() => { setEditingContact(null); setFormData({ category: 'society' }); setShowModal(true); }} className="flex items-center gap-2">
                             <Plus size={20} />
                             Add Contact
                         </Button>
@@ -140,12 +158,32 @@ export const EmergencyDirectoryPage: React.FC = () => {
                                     <div className="flex justify-between items-start">
                                         <h2 className="text-3xl font-black mb-4">{contact.phone}</h2>
                                         {user?.role === 'admin' && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDelete(contact.id); }}
-                                                className="p-1.5 bg-white/10 hover:bg-white/30 rounded-lg transition-colors"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingContact(contact);
+                                                        setFormData({
+                                                            name: contact.name,
+                                                            phone: contact.phone,
+                                                            category: contact.category,
+                                                            role: contact.role,
+                                                            email: contact.email,
+                                                            description: contact.description
+                                                        });
+                                                        setShowModal(true);
+                                                    }}
+                                                    className="p-1.5 bg-white/10 hover:bg-white/30 rounded-lg transition-colors"
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDelete(contact.id); }}
+                                                    className="p-1.5 bg-white/10 hover:bg-white/30 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                     <a
@@ -191,12 +229,31 @@ export const EmergencyDirectoryPage: React.FC = () => {
                                                             <Phone size={14} />
                                                         </a>
                                                         {user?.role === 'admin' && (
-                                                            <button
-                                                                onClick={() => handleDelete(contact.id)}
-                                                                className="p-2 bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+                                                            <div className="flex gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingContact(contact);
+                                                                        setFormData({
+                                                                            name: contact.name,
+                                                                            phone: contact.phone,
+                                                                            category: contact.category,
+                                                                            role: contact.role,
+                                                                            email: contact.email,
+                                                                            description: contact.description
+                                                                        });
+                                                                        setShowModal(true);
+                                                                    }}
+                                                                    className="p-2 bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-600 rounded-full transition-all"
+                                                                >
+                                                                    <Edit2 size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDelete(contact.id)}
+                                                                    className="p-2 bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-600 rounded-full transition-all"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                     {contact.description && <p className="text-sm text-gray-600 mb-3">{contact.description}</p>}
@@ -229,7 +286,14 @@ export const EmergencyDirectoryPage: React.FC = () => {
                                 <h4 className="font-bold text-gray-900 text-lg">Suggest a Contact?</h4>
                                 <p className="text-gray-600">If you want to add a new emergency number or local service to this directory, please inform the society admin.</p>
                             </div>
-                            <Button variant="secondary" className="whitespace-nowrap">
+                            <Button
+                                variant="secondary"
+                                className="whitespace-nowrap"
+                                onClick={() => {
+                                    const adminEmail = society?.contactEmail || 'admin@society.com';
+                                    window.location.href = `mailto:${adminEmail}?subject=Support Request from ${user?.name}`;
+                                }}
+                            >
                                 Contact Admin
                             </Button>
                         </div>
@@ -242,8 +306,8 @@ export const EmergencyDirectoryPage: React.FC = () => {
                     <Card className="w-full max-w-lg">
                         <form onSubmit={handleSubmit} className="p-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold">Add New Contact</h3>
-                                <button type="button" onClick={() => setShowModal(false)}><X /></button>
+                                <h3 className="text-xl font-bold">{editingContact ? 'Edit Contact' : 'Add New Contact'}</h3>
+                                <button type="button" onClick={() => { setShowModal(false); setEditingContact(null); }}><X /></button>
                             </div>
 
                             <div className="space-y-4 mb-8">
@@ -317,9 +381,9 @@ export const EmergencyDirectoryPage: React.FC = () => {
                             </div>
 
                             <div className="flex gap-4">
-                                <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancel</Button>
+                                <Button type="button" variant="secondary" onClick={() => { setShowModal(false); setEditingContact(null); }} className="flex-1">Cancel</Button>
                                 <Button type="submit" disabled={submitting} className="flex-1">
-                                    {submitting ? 'Adding...' : 'Add Contact'}
+                                    {submitting ? (editingContact ? 'Updating...' : 'Adding...') : (editingContact ? 'Update Contact' : 'Add Contact')}
                                 </Button>
                             </div>
                         </form>

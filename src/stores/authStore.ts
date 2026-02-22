@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { User } from '@/types';
 import { supabase } from '@/config/supabase';
 import { toCamel, toSnake } from '@/services/supabase.service';
+import { EmailService } from '@/services/email.service';
 
 interface AuthState {
   user: User | null;
@@ -406,6 +407,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         console.error('authStore: [ADMIN_REG] Profile creation error:', dbError);
         throw new Error(`Profile creation failed: ${dbError.message}`);
       }
+
+      // 3. Send automated email (non-blocking)
+      EmailService.sendRegistrationEmail(email, password, userData.name || 'New User')
+        .catch(err => console.error('authStore: Email dispatch failed:', err));
 
       console.log('authStore: [ADMIN_REG] Process complete for:', uid);
       set({ loading: false });
