@@ -96,12 +96,20 @@ export const PaymentsPage: React.FC = () => {
   };
 
   const handlePayment = async (paymentId: string, method: string = 'upi') => {
-    if (!user?.societyId) return;
+    if (!user?.societyId) {
+      toast.error('Session error: Society ID missing. Please log in again.');
+      return;
+    }
+
     const payment = payments.find(p => p.id === paymentId);
-    if (!payment) return;
+    if (!payment) {
+      toast.error('Payment record not found.');
+      return;
+    }
 
     if (method === 'bypass' || method === 'Mock') {
       try {
+        setLoading(true);
         await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
         await supabase
           .from('payments')
@@ -109,17 +117,26 @@ export const PaymentsPage: React.FC = () => {
           .eq('id', paymentId);
 
         toast.success('Mock payment successful!');
-        loadPayments();
+        await loadPayments();
         setShowPaymentModal(false);
         return;
       } catch (error) {
         console.error('Error in mock payment:', error);
         toast.error('Failed to complete mock payment');
         return;
+      } finally {
+        setLoading(false);
       }
     }
 
-    const totalAmount = payment.amount + (new Date(payment.dueDate) < new Date() ? (payment.fineAmount || 0) : 0);
+    const isOverdue = new Date(payment.dueDate) < new Date() && payment.status === 'pending';
+    const totalAmount = payment.amount + (isOverdue ? (payment.fineAmount || 0) : 0);
+
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+      console.error('Invalid payment amount:', totalAmount, payment);
+      toast.error('Invalid payment amount. Please contact support.');
+      return;
+    }
 
     const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
@@ -129,55 +146,73 @@ export const PaymentsPage: React.FC = () => {
       return;
     }
 
+    // Ensure prefill data is never undefined or empty strings for mandatory fields
+    const prefill = {
+      name: user.name || 'Resident',
+      email: user.email || '',
+      contact: user.phone || ''
+    };
+
     console.log('Initializing Razorpay with:', {
       amount: totalAmount,
       key: rzpKey.substring(0, 8) + '...',
-      paymentId
+      paymentId,
+      prefill
     });
 
     const options = {
       key: rzpKey,
-      amount: Math.round(totalAmount * 100), // Razorpay expects amount in paise, ensure integer
+      amount: Math.round(totalAmount * 100), // Amount in paise
       currency: 'INR',
       name: 'Smart Society',
       description: `${payment.type.toUpperCase()} Payment - ${payment.month}`,
       handler: async function (response: any) {
         try {
+          console.log('Razorpay success response:', response);
           await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
-          // Update transaction ID if available from Razorpay
+
           if (response.razorpay_payment_id) {
             await supabase
               .from('payments')
-              .update({ transaction_id: response.razorpay_payment_id })
+              .update({
+                transaction_id: response.razorpay_payment_id,
+                payment_method: method
+              })
               .eq('id', paymentId);
           }
+
           toast.success('Payment successful!');
-          loadPayments();
+          await loadPayments();
           setShowPaymentModal(false);
         } catch (error) {
-          console.error('Error updating payment status:', error);
-          toast.error('Payment acknowledged, but failed to update status. Please contact admin.');
+          console.error('Error updating payment status after success:', error);
+          toast.error('Payment acknowledged, but failed to update status. Please contact admin with your Transaction ID.');
         }
       },
-      prefill: {
-        name: user.name,
-        email: user.email,
-        contact: user.phone
-      },
+      prefill,
       theme: {
-        color: '#2563eb' // primary-600
+        color: '#2563eb'
+      },
+      modal: {
+        ondismiss: function () {
+          console.log('Razorpay modal dismissed');
+        }
       }
     };
 
     try {
+      if (!window.Razorpay) {
+        throw new Error('Razorpay SDK not loaded. Please refresh the page.');
+      }
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response: any) {
+        console.error('Razorpay payment failed:', response.error);
         toast.error(`Payment failed: ${response.error.description}`);
       });
       rzp.open();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error opening Razorpay:', error);
-      toast.error('Could not initialize payment. Please try again later.');
+      toast.error(error.message || 'Could not initialize payment. Please check your internet connection and try again.');
     }
   };
 

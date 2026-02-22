@@ -97,6 +97,11 @@ export const AdminSalaryPage: React.FC = () => {
             return;
         }
 
+        if (isNaN(formData.amount) || formData.amount <= 0) {
+            toast.error('Invalid salary amount');
+            return;
+        }
+
         const employee = employees.find(e => e.uid === formData.employeeId);
 
         const options = {
@@ -107,31 +112,45 @@ export const AdminSalaryPage: React.FC = () => {
             description: `Salary Payment - ${formData.month}`,
             handler: async function (response: any) {
                 try {
+                    console.log('Razorpay salary payment success:', response);
                     setLoading(true);
                     await processPaymentUpdate('razorpay', response.razorpay_payment_id);
                     toast.success('Salary paid successfully via Razorpay');
                     setShowPaymentModal(false);
-                    loadInitialData();
+                    await loadInitialData();
                 } catch (error) {
                     console.error('Error updating salary status:', error);
-                    toast.error('Payment successful, but failed to update status in database.');
+                    toast.error('Payment successful, but failed to update status in database. Please contact support.');
                 } finally {
                     setLoading(false);
                 }
             },
             prefill: {
-                name: employee?.name || '',
+                name: employee?.name || 'Employee',
                 email: employee?.email || '',
                 contact: employee?.phone || ''
             },
-            theme: { color: '#4f46e5' }
+            theme: { color: '#4f46e5' },
+            modal: {
+                ondismiss: function () {
+                    console.log('Razorpay modal dismissed');
+                }
+            }
         };
 
         try {
+            if (!(window as any).Razorpay) {
+                throw new Error('Razorpay SDK not loaded. Please refresh the page.');
+            }
             const rzp = new (window as any).Razorpay(options);
+            rzp.on('payment.failed', function (response: any) {
+                console.error('Razorpay salary payment failed:', response.error);
+                toast.error(`Payment failed: ${response.error.description}`);
+            });
             rzp.open();
-        } catch (error) {
-            toast.error('Could not initialize Razorpay');
+        } catch (error: any) {
+            console.error('Error opening Razorpay for salary:', error);
+            toast.error(error.message || 'Could not initialize Razorpay. Please try again.');
         }
     };
 
