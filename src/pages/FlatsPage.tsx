@@ -163,19 +163,21 @@ export const FlatsPage: React.FC = () => {
 
     const handleSaveBuilding = async (formData: any) => {
         if (!user?.societyId) return;
+        // Extract bhkType — it's not a buildings column, only used to bulk-update flats
+        const { bhkType, ...buildingData } = formData;
         try {
             if (editingBuilding) {
-                await SocietyService.updateBuilding(editingBuilding.id, formData);
+                await SocietyService.updateBuilding(editingBuilding.id, buildingData);
                 // Propagate BHK update to all existing flats in this building
-                if (formData.bhkType) {
+                if (bhkType) {
                     await supabase
                         .from('flats')
-                        .update({ bhk_type: formData.bhkType })
+                        .update({ bhk_type: bhkType })
                         .eq('building_id', editingBuilding.id);
                 }
                 toast.success('Building updated and unit types refreshed');
             } else {
-                await SocietyService.createBuilding(user.societyId, formData);
+                await SocietyService.createBuilding(user.societyId, buildingData);
                 toast.success('Building added');
             }
             setShowBuildingModal(false);
