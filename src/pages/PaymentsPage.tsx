@@ -95,7 +95,7 @@ export const PaymentsPage: React.FC = () => {
     }
   };
 
-  const handlePayment = async (paymentId: string) => {
+  const handlePayment = async (paymentId: string, method: string = 'upi') => {
     if (!user?.societyId) return;
     const payment = payments.find(p => p.id === paymentId);
     if (!payment) return;
@@ -135,6 +135,25 @@ export const PaymentsPage: React.FC = () => {
         color: '#2563eb' // primary-600
       }
     };
+
+    if (method === 'bypass' || method === 'Mock') {
+      try {
+        await PaymentService.updatePaymentStatus(user.societyId, paymentId, 'paid');
+        await supabase
+          .from('payments')
+          .update({ transaction_id: `MOCK_${Date.now()}` })
+          .eq('id', paymentId);
+
+        toast.success('Mock payment successful!');
+        loadPayments();
+        setShowPaymentModal(false);
+        return;
+      } catch (error) {
+        console.error('Error in mock payment:', error);
+        toast.error('Failed to complete mock payment');
+        return;
+      }
+    }
 
     try {
       const rzp = new window.Razorpay(options);
@@ -424,7 +443,7 @@ export const PaymentsPage: React.FC = () => {
               setShowPaymentModal(false);
               setSelectedPayment(null);
             }}
-            onPay={() => handlePayment(selectedPayment.id)}
+            onPay={(method) => handlePayment(selectedPayment.id, method)}
             flats={flats}
             buildings={buildings}
           />
@@ -471,7 +490,7 @@ const PaymentModal: React.FC<{
   payment: Payment;
   isOpen: boolean;
   onClose: () => void;
-  onPay: () => void;
+  onPay: (method: string) => void;
   flats: Flat[];
   buildings: Building[];
 }> = ({ payment, isOpen, onClose, onPay, flats, buildings }) => {
@@ -601,7 +620,7 @@ const PaymentModal: React.FC<{
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
           <div className="space-y-2">
-            {['upi', 'card', 'netbanking'].map((method) => (
+            {['upi', 'card', 'netbanking', 'bypass'].map((method) => (
               <label
                 key={method}
                 className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${paymentMethod === method
@@ -617,7 +636,9 @@ const PaymentModal: React.FC<{
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="w-4 h-4 text-primary-600"
                 />
-                <span className="ml-3 capitalize">{method}</span>
+                <span className="ml-3 capitalize">
+                  {method === 'bypass' ? 'Bypass Payment (Mock)' : method}
+                </span>
               </label>
             ))}
           </div>
@@ -628,7 +649,7 @@ const PaymentModal: React.FC<{
           <Button variant="secondary" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={onPay} className="flex-1">
+          <Button onClick={() => onPay(paymentMethod)} className="flex-1">
             Pay ₹{payment.amount.toLocaleString()}
           </Button>
         </div>
