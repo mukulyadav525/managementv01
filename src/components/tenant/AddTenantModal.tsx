@@ -80,7 +80,7 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                     .eq('uid', userId);
 
                 if (updateError) throw updateError;
-                toast.success('Existing tenant linked to flat!');
+                toast.success('Existing occupant linked to unit!');
             } else {
                 // 1. Create auth user using a non-persisting client so the owner isn't logged out
                 const { createClient } = await import('@supabase/supabase-js');
@@ -235,7 +235,7 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Select Flat <span className="text-red-500">*</span>
+                                Select Unit <span className="text-red-500">*</span>
                             </label>
                             <select
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -243,10 +243,10 @@ export const AddTenantModal: React.FC<AddTenantModalProps> = ({
                                 onChange={(e) => setFormData({ ...formData, flatId: e.target.value })}
                                 required
                             >
-                                <option value="">Choose a flat</option>
+                                <option value="">Choose a unit</option>
                                 {filteredFlats.map((flat) => (
                                     <option key={flat.id} value={flat.id}>
-                                        Flat {flat.flatNumber} - {flat.bhkType} (Floor {flat.floor})
+                                        Unit {flat.flatNumber} - {flat.bhkType} (Floor {flat.floor})
                                     </option>
                                 ))}
                             </select>

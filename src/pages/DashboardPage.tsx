@@ -115,14 +115,14 @@ export const DashboardPage: React.FC = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <StatsCard
-            title="Total Flats"
+            title="Total Units"
             value={stats.totalFlats}
             icon={Home}
             color="blue"
             trend={{ value: 0, isPositive: true }}
           />
           <StatsCard
-            title="Occupied Flats"
+            title="Occupied Units"
             value={stats.occupiedFlats}
             icon={Building2}
             color="green"
@@ -163,7 +163,7 @@ export const DashboardPage: React.FC = () => {
               {payments.slice(0, 5).map((payment: any) => (
                 <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">Flat {payment.flatId}</p>
+                    <p className="font-medium text-gray-900">Unit {payment.flatId || payment.unitId}</p>
                     <p className="text-sm text-gray-500">{payment.type}</p>
                   </div>
                   <div className="text-right">
@@ -189,7 +189,7 @@ export const DashboardPage: React.FC = () => {
                   <div key={complaint.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{complaint.title}</p>
-                      <p className="text-sm text-gray-500">Flat {complaint.flatId}</p>
+                      <p className="text-sm text-gray-500">Unit {complaint.flatId || complaint.unitId}</p>
                     </div>
                     <span className={`
                       px-3 py-1 rounded-full text-xs font-medium

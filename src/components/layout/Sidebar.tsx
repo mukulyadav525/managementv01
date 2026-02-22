@@ -42,7 +42,7 @@ const getNavItems = (userRole: string): NavItem[] => {
     { name: 'Dashboard', path: dashboardPath, icon: Home, roles: ['admin', 'owner', 'tenant', 'security', 'staff'] },
     { name: 'My Tenants', path: '/owner/tenants', icon: Users, roles: ['owner'] },
     { name: 'My Staff', path: '/owner/staff', icon: UserCircle, roles: ['owner', 'tenant'] },
-    { name: 'Flats', path: '/flats', icon: Building2, roles: ['admin', 'owner'] },
+    { name: 'Units', path: '/flats', icon: Building2, roles: ['admin', 'owner'] },
     { name: 'Residents', path: '/residents', icon: Users, roles: ['admin'] },
     { name: 'Staff', path: '/admin/staff', icon: UserCircle, roles: ['admin'] },
     { name: 'Residents', path: '/security/residents', icon: Users, roles: ['security'] },
@@ -93,7 +93,7 @@ export const Sidebar: React.FC = () => {
         if (user.flatIds && user.flatIds.length > 0) {
           const flats = await SocietyService.getFlats(user.societyId);
           const myFlats = (flats as Flat[]).filter(f => user.flatIds.includes(f.id));
-          setFlatNumbers(myFlats.map(f => `Flat ${f.flatNumber}`).join(', '));
+          setFlatNumbers(myFlats.map(f => `Unit ${f.flatNumber}`).join(', '));
         }
       } catch (error) {
         console.error('Error fetching sidebar metadata:', error);

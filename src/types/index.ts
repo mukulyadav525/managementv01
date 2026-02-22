@@ -55,6 +55,7 @@ export interface User {
 export interface Society {
   id: string;
   name: string;
+  societyType?: 'tower' | 'house';
   address: {
     street: string;
     area: string;
@@ -97,6 +98,7 @@ export interface Flat {
   id: string;
   buildingId: string;
   flatNumber: string;
+  unitType?: 'flat' | 'house';
   floor: number;
   bhkType: string;
   area: number;

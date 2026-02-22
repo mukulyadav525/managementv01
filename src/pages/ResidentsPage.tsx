@@ -338,7 +338,7 @@ export const ResidentsPage: React.FC = () => {
                                 <thead className="bg-gray-50 border-b">
                                     <tr>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Resident</th>
-                                        <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Flat</th>
+                                        <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Unit</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Contact</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Role</th>
                                         <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -359,13 +359,13 @@ export const ResidentsPage: React.FC = () => {
                                                             const flat = flats.find(f => f.id === fId);
                                                             const building = buildings.find(b => b.id === flat?.building_id);
                                                             return (
-                                                                <span key={fId} className="px-2 py-0.5 bg-primary-50 text-primary-700 rounded text-xs font-medium">
-                                                                    {flat ? `Flat ${flat.flat_number || flat.flatNumber} (${building ? building.name : 'No Building'}, Floor ${flat.floor})` : fId}
+                                                                <span key={fId} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
+                                                                    {flat ? `Unit ${flat.flat_number || flat.flatNumber} (${building ? building.name : ''})` : fId}
                                                                 </span>
                                                             );
                                                         })
                                                     ) : (
-                                                        <span className="text-xs text-gray-400">No flat</span>
+                                                        <span className="text-xs text-gray-400">No unit</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -676,8 +676,8 @@ const ResidentDetailsModal: React.FC<{
                     <p className="text-gray-900">{resident.createdAt ? new Date(resident.createdAt).toLocaleDateString() : 'N/A'}</p>
                 </div>
                 <div>
-                    <p className="text-sm font-medium text-gray-500 uppercase">Mapped Flats</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
+                    <p className="text-sm font-medium text-gray-500 uppercase">Mapped Units</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
                         {resident.flatIds && resident.flatIds.length > 0 ? (
                             resident.flatIds.map(f => (
                                 <span key={f} className="px-2 py-1 bg-gray-100 rounded text-sm">{f}</span>
@@ -854,7 +854,7 @@ const ResidentModal: React.FC<{
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {['owner', 'tenant'].includes(formData.role) && (
                         <div className="space-y-1">
-                            <label className="block text-sm font-medium text-gray-700">Flat Number</label>
+                            <label className="block text-sm font-medium text-gray-700">Unit Number</label>
                             <input
                                 type="text"
                                 list="flat-suggestions"

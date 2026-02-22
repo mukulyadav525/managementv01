@@ -213,7 +213,20 @@ export class PaymentService extends SupabaseService {
     }
 
     static async createPayment(societyId: string, data: any) {
-        return this.createDocument(`payments`, { ...data, societyId });
+        // Enforce Owner-only billing
+        const { data: unitData } = await supabase
+            .from('flats')
+            .select('owner_id')
+            .eq('id', data.flatId)
+            .single();
+
+        const ownerId = unitData?.owner_id || data.userId;
+
+        return this.createDocument(`payments`, {
+            ...data,
+            societyId,
+            userId: ownerId // Always enforce the unit's owner for billing
+        });
     }
 
     static async updatePaymentStatus(_societyId: string, paymentId: string, status: string) {

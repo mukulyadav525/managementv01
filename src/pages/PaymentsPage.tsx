@@ -129,7 +129,7 @@ export const PaymentsPage: React.FC = () => {
       const { error } = await supabase.from('payments').insert(toSnake(bills));
       if (error) throw error;
 
-      toast.success(`Bills generated for ${flatsData.length} flats`);
+      toast.success(`Bills generated for ${flatsData.length} units`);
       setShowBillModal(false);
       loadPayments();
     } catch (error) {
@@ -260,7 +260,7 @@ export const PaymentsPage: React.FC = () => {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Flat</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
@@ -482,7 +482,7 @@ const PaymentModal: React.FC<{
         {/* Payment Details */}
         <div className="bg-gray-50 p-4 rounded-lg space-y-2">
           <div className="flex justify-between">
-            <span className="text-gray-600">Flat:</span>
+            <span className="text-gray-600">Unit:</span>
             <span className="font-medium">
               {(() => {
                 const flat = flats.find(f => f.id === payment.flatId);
@@ -633,7 +633,7 @@ const GenerateBillModal: React.FC<{
           </select>
         </div>
         <Input
-          label="Amount per Flat (₹)"
+          label="Amount per Unit (₹)"
           type="number"
           placeholder="e.g. 2500"
           value={formData.amount}

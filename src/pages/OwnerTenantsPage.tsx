@@ -204,8 +204,8 @@ export const OwnerTenantsPage: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">My Tenants</h1>
-                        <p className="text-gray-600 mt-1">Manage your flats and tenant payments</p>
+                        <h1 className="text-3xl font-bold text-gray-900">My Tenants (Occupants)</h1>
+                        <p className="text-gray-600 mt-1">Manage your units and occupant payments</p>
                     </div>
                     <Button onClick={() => setShowAddTenantModal(true)}>
                         <Plus className="mr-2" size={18} />
@@ -220,7 +220,7 @@ export const OwnerTenantsPage: React.FC = () => {
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                placeholder="Search by flat number, tenant name, email, or phone..."
+                                placeholder="Search by unit number, name, email, or phone..."
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -233,7 +233,7 @@ export const OwnerTenantsPage: React.FC = () => {
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value as any)}
                             >
-                                <option value="all">All Flats</option>
+                                <option value="all">All Units</option>
                                 <option value="occupied">Occupied</option>
                                 <option value="vacant">Vacant</option>
                             </select>
@@ -253,8 +253,8 @@ export const OwnerTenantsPage: React.FC = () => {
                                 <Users size={48} className="mx-auto text-gray-400 mb-4" />
                                 <p className="text-gray-500">
                                     {searchQuery || filterStatus !== 'all'
-                                        ? 'No flats match your search criteria'
-                                        : 'You don\'t have any owned flats registered'}
+                                        ? 'No units match your search criteria'
+                                        : 'You don\'t have any owned units registered'}
                                 </p>
                             </div>
                         </Card>
@@ -275,7 +275,7 @@ export const OwnerTenantsPage: React.FC = () => {
                                                     <Users size={32} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-xl font-bold text-gray-900">Flat {flat.flatNumber}</h3>
+                                                    <h3 className="text-xl font-bold text-gray-900">Unit {flat.flatNumber}</h3>
                                                     <p className="text-sm text-gray-500">{flat.bhkType} • Floor {flat.floor}</p>
                                                     <div className="mt-2">
                                                         {hasTenants ? (
@@ -467,7 +467,7 @@ const EnhancedBillModal: React.FC<{
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Send Payment Request - ${tenantName ? tenantName : `Flat ${flatNumber}`}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Send Payment Request - ${tenantName ? tenantName : `Unit ${flatNumber}`}`}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
@@ -534,8 +534,8 @@ const DeleteConfirmModal: React.FC<{
         <Modal isOpen={isOpen} onClose={onClose} title="Remove Tenant">
             <div className="space-y-4">
                 <p className="text-gray-700">
-                    Are you sure you want to remove <strong>{tenantName}</strong> as a tenant?
-                    This will update the flat status to vacant and mark the tenant as inactive.
+                    Are you sure you want to remove <strong>{tenantName}</strong> as an occupant?
+                    This will update the unit status to vacant and mark them as inactive.
                 </p>
                 <div className="flex gap-3 pt-4">
                     <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
