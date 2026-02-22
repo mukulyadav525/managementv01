@@ -8,6 +8,8 @@ import { Flat, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 import { predictFloor } from '@/utils/flat.utils';
+import { BulkUnitGeneratorModal } from '@/components/society/BulkUnitGeneratorModal';
+import { AssignOccupantsModal } from '@/components/society/AssignOccupantsModal';
 
 export const FlatsPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -17,6 +19,8 @@ export const FlatsPage: React.FC = () => {
     const [showModal, setShowModal] = useState(false);
     const [showBuildingListModal, setShowBuildingListModal] = useState(false);
     const [showBuildingModal, setShowBuildingModal] = useState(false);
+    const [showBulkGeneratorModal, setShowBulkGeneratorModal] = useState(false);
+    const [assignOccupantsUnit, setAssignOccupantsUnit] = useState<Flat | null>(null);
     const [editingFlat, setEditingFlat] = useState<Flat | null>(null);
     const [editingBuilding, setEditingBuilding] = useState<Building | null>(null);
 
@@ -171,9 +175,13 @@ export const FlatsPage: React.FC = () => {
                                     <BuildingIcon size={20} className="mr-2" />
                                     Manage Buildings
                                 </Button>
+                                <Button variant="secondary" onClick={() => setShowBulkGeneratorModal(true)}>
+                                    <BuildingIcon size={20} className="mr-2" />
+                                    Bulk Setup Units
+                                </Button>
                                 <Button onClick={() => { setEditingFlat(null); setShowModal(true); }}>
                                     <Plus size={20} className="mr-2" />
-                                    Add Flat
+                                    Add Unit
                                 </Button>
                             </>
                         )}
@@ -262,6 +270,12 @@ export const FlatsPage: React.FC = () => {
                                                 </td>
                                                 {user?.role === 'admin' && (
                                                     <td className="px-6 py-4 space-x-2">
+                                                        <button
+                                                            onClick={() => setAssignOccupantsUnit(flat)}
+                                                            className="text-primary-600 hover:text-primary-800 text-sm font-medium border border-primary-200 px-2 py-1 rounded bg-primary-50"
+                                                        >
+                                                            Assign Occupants
+                                                        </button>
                                                         <button onClick={() => { setEditingFlat(flat); setShowModal(true); }} className="text-blue-600 hover:text-blue-800">
                                                             <Edit2 size={18} />
                                                         </button>
@@ -292,6 +306,25 @@ export const FlatsPage: React.FC = () => {
                         onSubmit={handleSaveFlat}
                         initialData={editingFlat}
                         buildings={buildings}
+                    />
+                )}
+
+                {showBulkGeneratorModal && user?.societyId && (
+                    <BulkUnitGeneratorModal
+                        isOpen={showBulkGeneratorModal}
+                        onClose={() => setShowBulkGeneratorModal(false)}
+                        societyId={user.societyId}
+                        onSuccess={loadInitialData}
+                    />
+                )}
+
+                {assignOccupantsUnit && user?.societyId && (
+                    <AssignOccupantsModal
+                        isOpen={!!assignOccupantsUnit}
+                        onClose={() => setAssignOccupantsUnit(null)}
+                        unit={assignOccupantsUnit}
+                        societyId={user.societyId}
+                        onSuccess={loadFlats}
                     />
                 )}
 

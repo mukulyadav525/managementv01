@@ -200,6 +200,81 @@ export class SocietyService extends SupabaseService {
     static async deleteBuilding(buildingId: string) {
         return this.deleteDocument(`buildings`, buildingId);
     }
+
+    static async bulkGenerateTowers(societyId: string, towers: Array<{ name: string, floors: number, unitsPerFloor: number }>) {
+        const buildingsToInsert = towers.map(t => ({
+            id: crypto.randomUUID(),
+            society_id: societyId,
+            name: t.name,
+            total_floors: t.floors,
+            total_flats: t.floors * t.unitsPerFloor,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }));
+
+        // Insert buildings
+        const { error: bError } = await supabase.from('buildings').insert(buildingsToInsert);
+        if (bError) throw bError;
+
+        const unitsToInsert = [];
+        for (let i = 0; i < towers.length; i++) {
+            const tower = towers[i];
+            const buildingId = buildingsToInsert[i].id;
+
+            for (let floor = 1; floor <= tower.floors; floor++) {
+                for (let unit = 1; unit <= tower.unitsPerFloor; unit++) {
+                    const unitNumberStr = unit < 10 ? `0${unit}` : `${unit}`;
+                    const unitNumber = `${tower.name.charAt(0) || ''}-${floor}${unitNumberStr}`;
+
+                    unitsToInsert.push({
+                        id: crypto.randomUUID(),
+                        society_id: societyId,
+                        building_id: buildingId,
+                        flat_number: unitNumber,
+                        floor: floor,
+                        bhk_type: '2BHK', // Default
+                        area: 1000,       // Default
+                        occupancy_status: 'vacant',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    });
+                }
+            }
+        }
+
+        // Insert units in batches to avoid payload limits if large
+        const batchSize = 100;
+        for (let i = 0; i < unitsToInsert.length; i += batchSize) {
+            const batch = unitsToInsert.slice(i, i + batchSize);
+            const { error: uError } = await supabase.from('flats').insert(batch);
+            if (uError) throw uError;
+        }
+
+        return true;
+    }
+
+    static async assignFlatToUser(userId: string, flatId: string) {
+        // Fetch current user flatIds
+        const { data: user, error: fetchErr } = await supabase
+            .from('users')
+            .select('flat_ids')
+            .eq('uid', userId)
+            .single();
+
+        if (fetchErr) throw fetchErr;
+
+        const flatIds = user.flat_ids || [];
+        if (!flatIds.includes(flatId)) {
+            flatIds.push(flatId);
+            const { error: updateErr } = await supabase
+                .from('users')
+                .update({ flat_ids: flatIds })
+                .eq('uid', userId);
+
+            if (updateErr) throw updateErr;
+        }
+        return true;
+    }
 }
 
 // Payment services
