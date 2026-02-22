@@ -10,8 +10,8 @@ interface AuthState {
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signUp: (email: string, password: string, userData: Partial<User> & { societyName?: string }) => Promise<void>;
-  completeProfile: (userData: Partial<User> & { societyName?: string }) => Promise<void>;
+  signUp: (email: string, password: string, userData: Partial<User> & { societyName?: string, societyType?: string }) => Promise<void>;
+  completeProfile: (userData: Partial<User> & { societyName?: string, societyType?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   initializeAuth: () => void;
   setUser: (user: User | null) => void;
@@ -102,7 +102,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  signUp: async (email: string, password: string, userData: Partial<User> & { societyName?: string }) => {
+  signUp: async (email: string, password: string, userData: Partial<User> & { societyName?: string, societyType?: string }) => {
     try {
       set({ loading: true, error: null });
       console.log('authStore: [SIGNUP] Starting registration for:', email);
@@ -131,7 +131,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  completeProfile: async (userData: Partial<User> & { societyName?: string }) => {
+  completeProfile: async (userData: Partial<User> & { societyName?: string, societyType?: string }) => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     if (!authUser) throw new Error('No authenticated user found');
@@ -183,6 +183,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         id: societyId,
         name: userData.societyName,
         total_flats: 10,
+        society_type: userData.societyType || 'tower',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

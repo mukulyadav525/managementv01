@@ -24,6 +24,7 @@ export const RegisterPage: React.FC = () => {
         phone: '',
         role: 'tenant' as any,
         societyName: '',
+        societyType: 'tower',
         societyId: ''
     });
     const [societies, setSocieties] = useState<any[]>([]);
@@ -59,7 +60,8 @@ export const RegisterPage: React.FC = () => {
                 phone: formData.phone,
                 role: formData.role,
                 societyId: formData.societyId,
-                societyName: formData.societyName
+                societyName: formData.societyName,
+                societyType: formData.societyType
             });
 
             toast.success('Registration and data seeding complete!');
@@ -167,14 +169,28 @@ export const RegisterPage: React.FC = () => {
                         </div>
 
                         {formData.role === 'admin' ? (
-                            <Input
-                                label="Society Name"
-                                type="text"
-                                placeholder="Marvel Heights"
-                                value={formData.societyName}
-                                onChange={(e) => setFormData({ ...formData, societyName: e.target.value })}
-                                required
-                            />
+                            <div className="space-y-4">
+                                <Input
+                                    label="Society Name"
+                                    type="text"
+                                    placeholder="Marvel Heights"
+                                    value={formData.societyName}
+                                    onChange={(e) => setFormData({ ...formData, societyName: e.target.value })}
+                                    required
+                                />
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-medium text-gray-700">Society Type</label>
+                                    <select
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                                        value={formData.societyType}
+                                        onChange={(e) => setFormData({ ...formData, societyType: e.target.value })}
+                                        required
+                                    >
+                                        <option value="tower">Tower-based (Apartments/Flats)</option>
+                                        <option value="house">House-based (Independent Houses/Villas)</option>
+                                    </select>
+                                </div>
+                            </div>
                         ) : (
                             <div className="space-y-1">
                                 <label className="block text-sm font-medium text-gray-700">Select Society</label>
