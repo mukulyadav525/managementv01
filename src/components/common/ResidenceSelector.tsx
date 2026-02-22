@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SocietyService } from '@/services/supabase.service';
+import { SocietyService, UserService } from '@/services/supabase.service';
 import { Flat, Building } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { predictFloor } from '@/utils/flat.utils';
@@ -25,6 +25,7 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
     const { user } = useAuthStore();
     const [buildings, setBuildings] = useState<Building[]>([]);
     const [allFlats, setAllFlats] = useState<Flat[]>([]);
+    const [residents, setResidents] = useState<any[]>([]);
     const [selectedBuilding, setSelectedBuilding] = useState<string>('');
     const [selectedFlatId, setSelectedFlatId] = useState<string>(initialFlatId || '');
     const [selectedFloor, setSelectedFloor] = useState<number | ''>('');
@@ -51,12 +52,14 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
         if (!user?.societyId) return;
         setLoading(true);
         try {
-            const [buildingsData, flatsData] = await Promise.all([
+            const [buildingsData, flatsData, usersData] = await Promise.all([
                 SocietyService.getBuildings(user.societyId),
-                SocietyService.getFlats(user.societyId)
+                SocietyService.getFlats(user.societyId),
+                UserService.getUsers(user.societyId)
             ]);
 
             setBuildings(buildingsData as Building[]);
+            setResidents(usersData as any[]);
 
             let filteredFlats = flatsData as Flat[];
             if (restrictedToUserFlats && user.role !== 'admin' && user.role !== 'staff' && user.role !== 'security') {
@@ -166,14 +169,23 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
                         ))}
                     </select>
                 </div>
-                {showResidentInfo && selectedFlatId && (
-                    <div className="space-y-1">
-                        <label className="block text-sm font-medium text-gray-700">Resident</label>
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-md text-xs text-blue-700 italic">
-                            {allFlats.find(f => f.id === selectedFlatId)?.ownerId === user?.uid ? 'You (Owner)' : 'Assigned Resident'}
+                {showResidentInfo && selectedFlatId && (() => {
+                    const flat = allFlats.find(f => f.id === selectedFlatId);
+                    const owner = flat?.ownerId ? residents.find(r => r.uid === flat.ownerId) : null;
+                    const tenant = flat?.tenantId ? residents.find(r => r.uid === flat.tenantId) : null;
+                    const names: string[] = [];
+                    if (owner) names.push(`${owner.name} (Owner)`);
+                    if (tenant) names.push(`${tenant.name} (Tenant)`);
+                    const display = names.length > 0 ? names.join(', ') : 'No resident assigned';
+                    return (
+                        <div className="space-y-1">
+                            <label className="block text-sm font-medium text-gray-700">Resident</label>
+                            <div className={`px-3 py-2 rounded-md text-xs italic border ${names.length > 0 ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                {display}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         </div>
     );
