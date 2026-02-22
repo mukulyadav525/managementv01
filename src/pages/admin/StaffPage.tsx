@@ -15,6 +15,7 @@ type StaffRoleType = 'society_staff' | 'domestic_staff';
 interface StaffUser extends User {
     staffType?: StaffRoleType;
     buildingId?: string;
+    buildingIds?: string[];
 }
 
 export const StaffPage: React.FC = () => {
@@ -86,8 +87,9 @@ export const StaffPage: React.FC = () => {
                 role: formData.staffType === 'security' ? 'security' as any : 'staff' as any,
                 staffType: formData.staffType === 'security' ? 'society_staff' : formData.staffType,
                 staffRole: formData.staffType === 'security' ? 'Security Guard' : formData.staffRole,
-                flatIds: formData.selectedFlatIds || [],
-                buildingId: formData.buildingId || null,
+                flatIds: formData.staffType === 'domestic_staff' ? formData.selectedFlatIds : [],
+                buildingId: formData.staffType === 'society_staff' ? (formData.selectedBuildingIds[0] || null) : (formData.staffType === 'domestic_staff' ? (formData.selectedBuildingIds[0] || null) : null),
+                buildingIds: formData.selectedBuildingIds || [],
                 status: editingStaff ? editingStaff.status : 'active',
                 updatedAt: new Date().toISOString()
             };
@@ -197,37 +199,45 @@ export const StaffPage: React.FC = () => {
                                             <td className="px-6 py-4">
                                                 {staff.role === 'security' ? (
                                                     <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                                                        <MapPin size={14} className="text-primary-500" />
-                                                        {staff.buildingId ? (
-                                                            <span className="font-medium text-gray-900">
-                                                                {buildings.find(b => b.id === staff.buildingId)?.name || 'Loading building...'}
-                                                            </span>
-                                                        ) : (
-                                                            <span className="text-red-400 italic">No building assigned</span>
-                                                        )}
+                                                        <Shield size={14} className="text-green-500" />
+                                                        <span className="font-medium text-gray-900 border-b border-dotted border-green-200">
+                                                            Society Wide
+                                                        </span>
                                                     </div>
-                                                ) : staff.staffType === 'domestic_staff' || (staff.flatIds && staff.flatIds.length > 0) ? (
-                                                    <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                                                        <Home size={14} className="text-gray-400" />
-                                                        {staff.flatIds && staff.flatIds.length > 0 ? (
-                                                            <div className="flex flex-wrap gap-1">
+                                                ) : (
+                                                    <div className="flex flex-col gap-1.5 max-w-[200px]">
+                                                        {/* Buildings Mapping */}
+                                                        {staff.buildingIds && staff.buildingIds.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1 items-center">
+                                                                <MapPin size={12} className="text-primary-500" />
+                                                                {staff.buildingIds.map(bId => (
+                                                                    <span key={bId} className="text-[10px] bg-primary-50 text-primary-700 px-1.5 py-0.5 rounded border border-primary-100">
+                                                                        {buildings.find(b => b.id === bId)?.name || 'Building'}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Flats Mapping (Only for Domestic) */}
+                                                        {staff.staffType === 'domestic_staff' && staff.flatIds && staff.flatIds.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1 items-center">
+                                                                <Home size={12} className="text-amber-500" />
                                                                 {staff.flatIds.map(fId => {
                                                                     const flat = flats.find(f => f.id === fId);
                                                                     return (
-                                                                        <span key={fId} className="bg-gray-100 px-2 py-0.5 rounded text-xs">
+                                                                        <span key={fId} className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100">
                                                                             {flat?.flatNumber || 'Flat'}
                                                                         </span>
                                                                     );
                                                                 })}
                                                             </div>
-                                                        ) : (
-                                                            <span className="text-red-400 italic">Not Mapped</span>
+                                                        ) : staff.staffType === 'domestic_staff' && (
+                                                            <span className="text-red-400 text-xs italic">No flats mapped</span>
                                                         )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center gap-1.5 text-sm text-gray-500 italic">
-                                                        <MapPin size={14} className="text-gray-300" />
-                                                        Resident Wide
+
+                                                        {(!staff.buildingIds || staff.buildingIds.length === 0) && (!staff.flatIds || staff.flatIds.length === 0) && (
+                                                            <span className="text-gray-400 text-xs italic">Unassigned</span>
+                                                        )}
                                                     </div>
                                                 )}
                                             </td>
@@ -364,8 +374,9 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         phone: initialData?.phone || '',
         staffType: initialData?.role === 'security' ? 'security' : (initialData?.staffType || 'society_staff'),
         staffRole: initialData?.staffRole || '',
-        buildingId: initialData?.buildingId || '',
-        selectedFlatIds: initialData?.flatIds || [] as string[]
+        selectedBuildingIds: initialData?.buildingIds || (initialData?.buildingId ? [initialData.buildingId] : []),
+        selectedFlatIds: initialData?.flatIds || [] as string[],
+        activeBuildingTab: '' // For Domestic Staff: which building's flats we are showing
     });
 
     const [buildings, setBuildings] = useState<any[]>([]);
@@ -398,10 +409,32 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
         }
     }, [initialData, currentRoles]);
 
-    // Flats filtered by selected building
-    const filteredFlats = formData.buildingId
-        ? allFlats.filter(f => f.building_id === formData.buildingId)
-        : allFlats;
+    // Logic for toggling buildings / flats
+
+
+    const toggleBuilding = (buildingId: string) => {
+        setFormData(prev => {
+            const isRemoving = prev.selectedBuildingIds.includes(buildingId);
+            const newBuildingIds = isRemoving
+                ? prev.selectedBuildingIds.filter((id: string) => id !== buildingId)
+                : [...prev.selectedBuildingIds, buildingId];
+
+            // If removing a building, also remove its flats (only for domestic)
+            const newFlatIds = isRemoving
+                ? prev.selectedFlatIds.filter((fId: string) => {
+                    const flat = allFlats.find(f => f.id === fId);
+                    return flat?.building_id !== buildingId;
+                })
+                : prev.selectedFlatIds;
+
+            return {
+                ...prev,
+                selectedBuildingIds: newBuildingIds,
+                selectedFlatIds: newFlatIds,
+                activeBuildingTab: prev.activeBuildingTab === buildingId && isRemoving ? '' : prev.activeBuildingTab
+            };
+        });
+    };
 
     const toggleFlat = (flatId: string) => {
         setFormData(prev => ({
@@ -461,7 +494,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                     <div className="grid grid-cols-3 gap-3">
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'security', staffRole: 'Security Guard', selectedFlatIds: [] })}
+                            onClick={() => setFormData({ ...formData, staffType: 'security', staffRole: 'Security Guard', selectedFlatIds: [], selectedBuildingIds: [] })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'security'
                                 ? 'bg-green-50 border-green-600 ring-1 ring-green-600'
                                 : 'bg-white border-gray-200 hover:border-green-400'
@@ -472,7 +505,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'society_staff', staffRole: '', selectedFlatIds: [] })}
+                            onClick={() => setFormData({ ...formData, staffType: 'society_staff', staffRole: '', selectedFlatIds: [], selectedBuildingIds: [] })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'society_staff'
                                 ? 'bg-primary-50 border-primary-600 ring-1 ring-primary-600'
                                 : 'bg-white border-gray-200 hover:border-primary-400'
@@ -483,7 +516,7 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormData({ ...formData, staffType: 'domestic_staff', staffRole: '' })}
+                            onClick={() => setFormData({ ...formData, staffType: 'domestic_staff', staffRole: '', selectedFlatIds: [], selectedBuildingIds: [] })}
                             className={`p-3 rounded-xl border text-left transition-all ${formData.staffType === 'domestic_staff'
                                 ? 'bg-amber-50 border-amber-600 ring-1 ring-amber-600'
                                 : 'bg-white border-gray-200 hover:border-amber-400'
@@ -545,94 +578,115 @@ const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onC
                     </div>
                 )}
 
-                {/* Security: Building-only selector */}
+                {/* Security: Society-wide notice */}
                 {formData.staffType === 'security' && (
                     <div className="space-y-4 bg-green-50/50 p-4 rounded-xl border border-green-100">
-                        <label className="block text-sm font-medium text-green-900">Assign to Building</label>
-                        <select
-                            value={formData.buildingId}
-                            onChange={(e) => setFormData({ ...formData, buildingId: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-green-500"
-                            required
-                        >
-                            <option value="">Select Building...</option>
-                            {buildings.map(b => (
-                                <option key={b.id} value={b.id}>{b.name}</option>
-                            ))}
-                        </select>
-                        <p className="mt-1 text-xs text-green-700 italic flex items-center gap-1">
-                            <Shield size={12} /> Security guards are assigned to a building, not specific flats.
+                        <div className="flex items-center gap-2 text-green-900">
+                            <Shield size={20} />
+                            <span className="font-bold">Society Wide Access</span>
+                        </div>
+                        <p className="text-sm text-green-700 italic">
+                            Security guards have access to the whole society records (visitors, residents, etc.). No specific building or flat assignment is required.
                         </p>
                     </div>
                 )}
 
-                {/* Staff (Society or Domestic): Building + Multi-Flat selector */}
+                {/* Staff (Society or Domestic): Multi-Building selector */}
                 {(formData.staffType === 'society_staff' || formData.staffType === 'domestic_staff') && (
                     <div className={`space-y-4 p-4 rounded-xl border ${formData.staffType === 'domestic_staff'
                         ? 'bg-amber-50/50 border-amber-100'
                         : 'bg-primary-50/50 border-primary-100'
                         }`}>
                         <label className={`block text-sm font-medium ${formData.staffType === 'domestic_staff' ? 'text-amber-900' : 'text-primary-900'
-                            }`}>Assign Building & Flat(s)</label>
+                            }`}>Select Assigned Building(s)</label>
 
-                        {/* Building Dropdown */}
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Building</label>
-                            <select
-                                value={formData.buildingId}
-                                onChange={(e) => setFormData({ ...formData, buildingId: e.target.value, selectedFlatIds: [] })}
-                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary-500"
-                                required
-                            >
-                                <option value="">Select Building...</option>
-                                {buildings.map(b => (
-                                    <option key={b.id} value={b.id}>{b.name}</option>
-                                ))}
-                            </select>
+                        {/* Building Multi-Select Chills */}
+                        <div className="flex flex-wrap gap-2">
+                            {buildings.map(b => (
+                                <button
+                                    key={b.id}
+                                    type="button"
+                                    onClick={() => toggleBuilding(b.id)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${formData.selectedBuildingIds.includes(b.id)
+                                        ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
+                                        }`}
+                                >
+                                    {b.name}
+                                </button>
+                            ))}
                         </div>
 
-                        {/* Flat Multi-Select (shown after building is selected) */}
-                        {formData.buildingId && (
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">
-                                    Select Flat(s) {formData.selectedFlatIds.length > 0 && <span className="text-primary-600 font-bold">({formData.selectedFlatIds.length} selected)</span>}
-                                </label>
-                                {filteredFlats.length === 0 ? (
-                                    <p className="text-sm text-gray-400 italic py-2">No flats found in this building.</p>
-                                ) : (
-                                    <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-white rounded-lg border">
-                                        {filteredFlats.map(flat => (
+                        {/* Domestic Staff: Multi-Flat selector (appears only if buildings are selected) */}
+                        {formData.staffType === 'domestic_staff' && formData.selectedBuildingIds.length > 0 && (
+                            <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-sm font-medium text-amber-900">Select Flat(s)</label>
+
+                                {/* Building Tabs for Flats */}
+                                <div className="flex gap-2 border-b border-amber-200 pb-2">
+                                    {formData.selectedBuildingIds.map((bId: string) => (
+                                        <button
+                                            key={bId}
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, activeBuildingTab: bId })}
+                                            className={`px-3 py-1 text-xs font-medium rounded-t-lg transition-colors ${(formData.activeBuildingTab === bId || (!formData.activeBuildingTab && formData.selectedBuildingIds[0] === bId))
+                                                ? 'bg-amber-100 text-amber-900 border-b-2 border-amber-600'
+                                                : 'text-gray-500 hover:bg-amber-50'
+                                                }`}
+                                        >
+                                            {buildings.find(b => b.id === bId)?.name}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Flat Grid for active building */}
+                                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-white rounded-lg border border-amber-100">
+                                    {allFlats
+                                        .filter(f => f.building_id === (formData.activeBuildingTab || formData.selectedBuildingIds[0]))
+                                        .map(flat => (
                                             <button
                                                 key={flat.id}
                                                 type="button"
                                                 onClick={() => toggleFlat(flat.id)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${formData.selectedFlatIds.includes(flat.id)
-                                                    ? 'bg-primary-600 text-white border-primary-600 shadow-sm'
-                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-medium border transition-all ${formData.selectedFlatIds.includes(flat.id)
+                                                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                                                    : 'bg-white text-gray-600 border-gray-100 hover:border-amber-400'
                                                     }`}
                                             >
-                                                {flat.flat_number} {flat.floor ? `(Floor ${flat.floor})` : ''}
+                                                {flat.flat_number}
                                             </button>
-                                        ))}
-                                    </div>
+                                        ))
+                                    }
+                                    {allFlats.filter(f => f.building_id === (formData.activeBuildingTab || formData.selectedBuildingIds[0])).length === 0 && (
+                                        <p className="text-xs text-gray-400 italic">No flats mapped in this building.</p>
+                                    )}
+                                </div>
+
+                                {formData.selectedFlatIds.length > 0 && (
+                                    <p className="text-xs text-amber-600 font-bold">
+                                        {formData.selectedFlatIds.length} flat(s) selected across buildings.
+                                    </p>
                                 )}
                             </div>
                         )}
 
                         <p className={`mt-1 text-xs italic flex items-center gap-1 ${formData.staffType === 'domestic_staff' ? 'text-amber-700' : 'text-primary-700'
                             }`}>
-                            <Home size={12} /> Staff can work at multiple buildings and flats.
+                            <Home size={12} /> {formData.staffType === 'domestic_staff'
+                                ? 'Domestic staff can be assigned to multiple buildings and specific flats within them.'
+                                : 'Society staff are assigned at the building level and work across the entire building.'}
                         </p>
                     </div>
                 )}
+            </div>
 
-                <div className="flex gap-3 pt-6 border-t border-gray-100">
-                    <Button type="button" variant="secondary" onClick={onClose} className="flex-1 rounded-xl">Cancel</Button>
-                    <Button type="submit" className="flex-1 rounded-xl shadow-lg shadow-primary-200">
-                        {initialData ? 'Update Details' : 'Register Staff'}
-                    </Button>
-                </div>
-            </form>
-        </Modal>
+            <div className="flex gap-3 pt-6 border-t border-gray-100">
+                <Button type="button" variant="secondary" onClick={onClose} className="flex-1 rounded-xl">Cancel</Button>
+                <Button type="submit" className="flex-1 rounded-xl shadow-lg shadow-primary-200">
+                    {initialData ? 'Update Details' : 'Register Staff'}
+                </Button>
+            </div>
+        </form>
+    </Modal >
     );
 };
