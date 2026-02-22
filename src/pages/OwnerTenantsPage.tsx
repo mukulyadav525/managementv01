@@ -4,18 +4,20 @@ import { Layout } from '@/components/layout/Layout';
 import { Button, Card, Modal, Input } from '@/components/common';
 import { useAuthStore } from '@/stores/authStore';
 import { SocietyService, PaymentService, RentAgreementService } from '@/services/supabase.service';
-import { Flat, User, PaymentType, RentAgreement } from '@/types';
+import { Flat, User, PaymentType, RentAgreement, Building } from '@/types';
 import { AddTenantModal } from '@/components/tenant/AddTenantModal';
 import { EditTenantModal } from '@/components/tenant/EditTenantModal';
 import { TenantDetailsModal } from '@/components/tenant/TenantDetailsModal';
 import { RentAgreementModal } from '@/components/tenant/RentAgreementModal';
 import { AssignOccupantsModal } from '@/components/society/AssignOccupantsModal';
 import { supabase } from '@/config/supabase';
+import { formatFlatName } from '@/utils/flat.utils';
 import toast from 'react-hot-toast';
 
 export const OwnerTenantsPage: React.FC = () => {
     const { user } = useAuthStore();
     const [flats, setFlats] = useState<Flat[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
     const [tenants, setTenants] = useState<{ [key: string]: User }>({});
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +47,9 @@ export const OwnerTenantsPage: React.FC = () => {
             setLoading(true);
             const ownedFlats = (await SocietyService.getOwnedFlats(user.uid)) as Flat[];
             setFlats(ownedFlats);
+
+            const buildingsData = await SocietyService.getBuildings(user.societyId);
+            setBuildings(buildingsData as Building[]);
 
             if (ownedFlats && ownedFlats.length > 0) {
                 const flatIds = ownedFlats.map((f: Flat) => f.id);
@@ -277,7 +282,9 @@ export const OwnerTenantsPage: React.FC = () => {
                                                     <Users size={32} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-xl font-bold text-gray-900">Unit {flat.flatNumber}</h3>
+                                                    <h3 className="text-xl font-bold text-gray-900">
+                                                        {formatFlatName(flat.flatNumber, buildings.find(b => b.id === flat.buildingId)?.name)}
+                                                    </h3>
                                                     <p className="text-sm text-gray-500">{flat.bhkType} • Floor {flat.floor}</p>
                                                     <div className="mt-2 flex gap-2">
                                                         {(() => {

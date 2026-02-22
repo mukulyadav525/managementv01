@@ -8,11 +8,14 @@ import { Complaint } from '@/types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { supabase } from '@/config/supabase';
+import { formatFlatName } from '@/utils/flat.utils';
+import { Building } from '@/types';
 
 export const ComplaintsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [flats, setFlats] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'open' | 'in-progress' | 'resolved'>('all');
@@ -21,15 +24,37 @@ export const ComplaintsPage: React.FC = () => {
     if (user?.societyId) {
       loadComplaints();
       loadFlats();
+      loadBuildings();
     }
   }, [user]);
+
+  const loadBuildings = async () => {
+    if (!user?.societyId) return;
+    try {
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('society_id', user.societyId);
+      if (error) throw error;
+      setBuildings((data || []).map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        societyId: b.society_id,
+        totalFloors: b.total_floors || 0,
+        totalFlats: b.total_flats || 0,
+        createdAt: b.created_at || new Date().toISOString()
+      })));
+    } catch (error) {
+      console.error('Error loading buildings:', error);
+    }
+  };
 
   const loadFlats = async () => {
     if (!user?.societyId) return;
     try {
       const { data, error } = await supabase
         .from('flats')
-        .select('id, flat_number')
+        .select('id, flat_number, building_id')
         .eq('society_id', user.societyId);
 
       if (error) throw error;
@@ -241,8 +266,17 @@ export const ComplaintsPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right text-sm text-gray-500">
+                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                        <AlertCircle size={16} />
+                        <p>
+                          {(() => {
+                            const flat = flats.find(f => f.id === complaint.flatId);
+                            const building = buildings.find(b => b.id === flat?.building_id);
+                            return flat ? formatFlatName(flat.flat_number, building?.name) : (complaint.flatId || 'N/A');
+                          })()}
+                        </p>
+                      </div>
                       <div className="flex items-center gap-2 justify-end">
-                        <p>Flat {flats.find(f => f.id === complaint.flatId)?.flat_number || complaint.flatId}</p>
                         {user?.role === 'admin' && (
                           <button
                             onClick={() => handleDelete(complaint.id)}

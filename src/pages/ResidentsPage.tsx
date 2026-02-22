@@ -8,7 +8,7 @@ import { User, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import { exportToCSV } from '@/utils/export';
 import toast from 'react-hot-toast';
-import { predictFloor } from '@/utils/flat.utils';
+import { formatFlatName, predictFloor } from '@/utils/flat.utils';
 import { RentAgreementModal } from '@/components/tenant/RentAgreementModal';
 import { RentAgreementService } from '@/services/supabase.service';
 import { RentAgreement } from '@/types';
@@ -367,8 +367,8 @@ export const ResidentsPage: React.FC = () => {
                                                         return assignedFlats.map((flat: any) => {
                                                             const building = buildings.find(b => b.id === flat.building_id);
                                                             return (
-                                                                <span key={flat.id} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
-                                                                    {`Unit ${flat.flat_number || flat.flatNumber} (${building ? building.name : ''})`}
+                                                                <span key={flat.id} className="text-xs font-semibold px-2 py-1 bg-primary-100 text-primary-700 rounded-full">
+                                                                    {formatFlatName(flat.flat_number || flat.flatNumber, building?.name)}
                                                                 </span>
                                                             );
                                                         });

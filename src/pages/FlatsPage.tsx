@@ -7,7 +7,7 @@ import { SocietyService, toSnake } from '@/services/supabase.service';
 import { Flat, Building } from '@/types';
 import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
-import { predictFloor } from '@/utils/flat.utils';
+import { predictFloor, formatFlatName } from '@/utils/flat.utils';
 import { BulkUnitGeneratorModal } from '@/components/society/BulkUnitGeneratorModal';
 import { AssignOccupantsModal } from '@/components/society/AssignOccupantsModal';
 
@@ -338,7 +338,9 @@ export const FlatsPage: React.FC = () => {
                                                         />
                                                     </td>
                                                 )}
-                                                <td className="px-6 py-4 font-medium">{flat.flatNumber}</td>
+                                                <td className="px-6 py-4 font-medium">
+                                                    {formatFlatName(flat.flatNumber, building?.name)}
+                                                </td>
                                                 <td className="px-6 py-4">{building?.name || '--'}</td>
                                                 <td className="px-6 py-4">{flat.bhkType}</td>
                                                 <td className="px-6 py-4">{flat.floor}</td>

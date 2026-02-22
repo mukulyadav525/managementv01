@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SocietyService, UserService } from '@/services/supabase.service';
 import { Flat, Building } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
-import { predictFloor } from '@/utils/flat.utils';
+import { predictFloor, formatFlatName } from '@/utils/flat.utils';
 
 interface ResidenceSelectorProps {
     onSelect: (flatId: string, flat?: Flat, floor?: number) => void;
@@ -146,7 +146,9 @@ export const ResidenceSelector: React.FC<ResidenceSelectorProps> = ({
                     >
                         <option value="">Select Flat...</option>
                         {filteredFlatsByBuilding.map(f => (
-                            <option key={f.id} value={f.id}>{f.flatNumber}</option>
+                            <option key={f.id} value={f.id}>
+                                {formatFlatName(f.flatNumber, currentBuilding?.name)}
+                            </option>
                         ))}
                     </select>
                 </div>

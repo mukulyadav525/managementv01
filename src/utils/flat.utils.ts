@@ -27,3 +27,13 @@ export const predictFloor = (flatNumber: string): number => {
 export const formatFlatDisplay = (flatNumber: string | number, floor: string | number): string => {
     return `Flat ${flatNumber} (Floor ${floor})`;
 };
+
+/**
+ * Standardizes flat naming to "<tower name> - <flat no>"
+ */
+export const formatFlatName = (flatNumber: string | number, buildingName?: string): string => {
+    if (!buildingName) return `${flatNumber}`;
+    // If building name is already in the flat number, don't duplicate (unlikely with current schema but safe)
+    if (typeof flatNumber === 'string' && flatNumber.startsWith(buildingName)) return flatNumber;
+    return `${buildingName} - ${flatNumber}`;
+};

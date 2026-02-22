@@ -7,6 +7,7 @@ import { supabase } from '@/config/supabase';
 import toast from 'react-hot-toast';
 import { Layout } from '@/components/layout/Layout';
 import { Card, StatsCard } from '@/components/common';
+import { formatFlatName } from '@/utils/flat.utils';
 
 export const ResidentsListPage: React.FC = () => {
     const { user } = useAuthStore();
@@ -233,7 +234,7 @@ export const ResidentsListPage: React.FC = () => {
                                                                 const building = buildings.find(b => b.id === flat.buildingId);
                                                                 return (
                                                                     <span key={flat.id} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs">
-                                                                        {building ? `${building.name} - ` : ''}{flat.flatNumber}
+                                                                        {formatFlatName(flat.flatNumber, building?.name)}
                                                                     </span>
                                                                 );
                                                             })}

@@ -17,6 +17,8 @@ import {
   SocietyService
 } from '@/services/supabase.service';
 import { TenantKYC } from '@/components/tenant/TenantKYC';
+import { formatFlatName } from '@/utils/flat.utils';
+import { Flat, Building } from '@/types';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
@@ -30,6 +32,8 @@ export const DashboardPage: React.FC = () => {
   });
   const [payments, setPayments] = useState<any[]>([]);
   const [complaints, setComplaints] = useState<any[]>([]);
+  const [flats, setFlats] = useState<Flat[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -68,9 +72,14 @@ export const DashboardPage: React.FC = () => {
       ).length;
 
       // Load flats for stats
-      const flats = await SocietyService.getFlats(user.societyId);
-      const totalFlats = flats.length;
-      const occupiedFlats = flats.filter((f: any) => f.occupancyStatus === 'owner-occupied' || f.occupancyStatus === 'tenant-occupied').length;
+      const flatsData = await SocietyService.getFlats(user.societyId);
+      setFlats(flatsData as Flat[]);
+      const totalFlats = flatsData.length;
+      const occupiedFlats = flatsData.filter((f: any) => f.occupancyStatus === 'owner-occupied' || f.occupancyStatus === 'tenant-occupied').length;
+
+      // Load buildings
+      const buildingsData = await SocietyService.getBuildings(user.societyId);
+      setBuildings(buildingsData as Building[]);
 
       setStats({
         totalFlats,
@@ -163,7 +172,14 @@ export const DashboardPage: React.FC = () => {
               {payments.slice(0, 5).map((payment: any) => (
                 <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">Unit {payment.flatId || payment.unitId}</p>
+                    <p className="font-medium text-gray-900">
+                      {(() => {
+                        const flatId = payment.flatId || payment.unitId;
+                        const flat = flats.find(f => f.id === flatId);
+                        const building = buildings.find(b => b.id === flat?.buildingId);
+                        return flat ? formatFlatName(flat.flatNumber, building?.name) : 'Unit ' + (flatId || 'N/A');
+                      })()}
+                    </p>
                     <p className="text-sm text-gray-500">{payment.type}</p>
                   </div>
                   <div className="text-right">
@@ -189,7 +205,14 @@ export const DashboardPage: React.FC = () => {
                   <div key={complaint.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{complaint.title}</p>
-                      <p className="text-sm text-gray-500">Unit {complaint.flatId || complaint.unitId}</p>
+                      <p className="text-sm text-gray-500">
+                        {(() => {
+                          const flatId = complaint.flatId || complaint.unitId;
+                          const flat = flats.find(f => f.id === flatId);
+                          const building = buildings.find(b => b.id === flat?.buildingId);
+                          return flat ? formatFlatName(flat.flatNumber, building?.name) : 'Unit ' + (flatId || 'N/A');
+                        })()}
+                      </p>
                     </div>
                     <span className={`
                       px-3 py-1 rounded-full text-xs font-medium

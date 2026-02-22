@@ -12,6 +12,7 @@ import { toSnake, toCamel } from '@/services/supabase.service';
 import { exportToCSV } from '@/utils/export';
 import { Input } from '@/components/common';
 import { ReceiptModal } from '@/components/payments/ReceiptModal';
+import { formatFlatName } from '@/utils/flat.utils';
 
 
 declare global {
@@ -390,7 +391,7 @@ export const PaymentsPage: React.FC = () => {
                           {(() => {
                             const flat = flats.find(f => f.id === payment.flatId);
                             const building = buildings.find(b => b.id === flat?.buildingId);
-                            return flat ? `${building ? building.name + ' - ' : ''}${flat.flatNumber}` : payment.flatId;
+                            return flat ? formatFlatName(flat.flatNumber, building?.name) : payment.flatId;
                           })()}
                         </div>
                         <div className="text-sm text-gray-500">{payment.month}</div>
@@ -601,7 +602,7 @@ const PaymentModal: React.FC<{
               {(() => {
                 const flat = flats.find(f => f.id === payment.flatId);
                 const building = buildings.find(b => b.id === flat?.buildingId);
-                return flat ? `${building ? building.name + ' - ' : ''}${flat.flatNumber}` : payment.flatId;
+                return flat ? formatFlatName(flat.flatNumber, building?.name) : payment.flatId;
               })()}
             </span>
           </div>

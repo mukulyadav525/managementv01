@@ -4,6 +4,8 @@ import { SocietyService } from '@/services/supabase.service';
 import { User, Flat } from '@/types';
 import toast from 'react-hot-toast';
 import { supabase } from '@/config/supabase';
+import { Building } from '@/types';
+import { formatFlatName } from '@/utils/flat.utils';
 
 interface AssignOccupantsModalProps {
     isOpen: boolean;
@@ -23,6 +25,7 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
 
     const [availableOwners, setAvailableOwners] = useState<User[]>([]);
     const [availableTenants, setAvailableTenants] = useState<User[]>([]);
+    const [buildings, setBuildings] = useState<Building[]>([]);
 
     const [selectedOwnerId, setSelectedOwnerId] = useState<string>(unit.ownerId || '');
     const [selectedTenantId, setSelectedTenantId] = useState<string>(unit.tenantId || '');
@@ -35,6 +38,7 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
     useEffect(() => {
         if (isOpen) {
             loadUsers();
+            loadBuildings();
             // Reset state based on incoming unit whenever opened
             setSelectedOwnerId(unit.ownerId || '');
             setSelectedTenantId(unit.tenantId || '');
@@ -43,6 +47,26 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
             setTenantsByFloor(unit.tenantsByFloor || {});
         }
     }, [isOpen, unit]);
+
+    const loadBuildings = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('buildings')
+                .select('*')
+                .eq('society_id', societyId);
+            if (error) throw error;
+            setBuildings((data || []).map((b: any) => ({
+                id: b.id,
+                name: b.name,
+                societyId: b.society_id,
+                totalFloors: b.total_floors || 0,
+                totalFlats: b.total_flats || 0,
+                createdAt: b.created_at || new Date().toISOString()
+            })));
+        } catch (error) {
+            console.error('Error loading buildings:', error);
+        }
+    };
 
     const loadUsers = async () => {
         setFetchingUsers(true);
@@ -153,7 +177,7 @@ export const AssignOccupantsModal: React.FC<AssignOccupantsModalProps> = ({ isOp
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Assign Occupants - Unit ${unit.flatNumber}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`Assign Occupants - ${formatFlatName(unit.flatNumber, buildings.find(b => b.id === unit.buildingId)?.name)}`}>
             <div className="space-y-6">
 
                 {fetchingUsers ? (

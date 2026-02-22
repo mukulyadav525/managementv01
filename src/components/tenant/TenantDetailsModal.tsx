@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from '@/components/common';
 import { User, RentAgreement } from '@/types';
-import { Mail, Phone, Calendar, Users, FileText, Car, CreditCard, ExternalLink } from 'lucide-react';
+import { Mail, Phone, Calendar, Users, FileText, Car, CreditCard, ExternalLink, ZoomIn, X } from 'lucide-react';
 import { PaymentService, RentAgreementService } from '@/services/supabase.service';
 
 interface TenantDetailsModalProps {
@@ -22,6 +22,7 @@ export const TenantDetailsModal: React.FC<TenantDetailsModalProps> = ({
     const [payments, setPayments] = useState<any[]>([]);
     const [agreement, setAgreement] = useState<RentAgreement | null>(null);
     const [loading, setLoading] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     useEffect(() => {
         if (tenant && isOpen) {
@@ -135,13 +136,18 @@ export const TenantDetailsModal: React.FC<TenantDetailsModalProps> = ({
                         <div>
                             <p className="text-xs text-gray-500 mb-2">Aadhar Card</p>
                             {tenant.kycDocuments?.aadhar ? (
-                                <a href={tenant.kycDocuments.aadhar} target="_blank" rel="noopener noreferrer">
+                                <div className="relative group cursor-pointer" onClick={() => setSelectedImage(tenant.kycDocuments!.aadhar!)}>
                                     <img
                                         src={tenant.kycDocuments.aadhar}
                                         alt="Aadhar"
-                                        className="w-full h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                                        className="w-full h-32 object-cover rounded-lg border group-hover:opacity-75 transition-opacity"
                                     />
-                                </a>
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="bg-white/90 p-2 rounded-full shadow-lg">
+                                            <ZoomIn size={20} className="text-gray-900" />
+                                        </div>
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="w-full h-32 bg-gray-50 border border-dashed rounded-lg flex items-center justify-center text-gray-400 text-sm">
                                     Not Uploaded
@@ -151,13 +157,18 @@ export const TenantDetailsModal: React.FC<TenantDetailsModalProps> = ({
                         <div>
                             <p className="text-xs text-gray-500 mb-2">PAN Card</p>
                             {tenant.kycDocuments?.pan ? (
-                                <a href={tenant.kycDocuments.pan} target="_blank" rel="noopener noreferrer">
+                                <div className="relative group cursor-pointer" onClick={() => setSelectedImage(tenant.kycDocuments!.pan!)}>
                                     <img
                                         src={tenant.kycDocuments.pan}
                                         alt="PAN"
-                                        className="w-full h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
+                                        className="w-full h-32 object-cover rounded-lg border group-hover:opacity-75 transition-opacity"
                                     />
-                                </a>
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="bg-white/90 p-2 rounded-full shadow-lg">
+                                            <ZoomIn size={20} className="text-gray-900" />
+                                        </div>
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="w-full h-32 bg-gray-50 border border-dashed rounded-lg flex items-center justify-center text-gray-400 text-sm">
                                     Not Uploaded
@@ -207,8 +218,8 @@ export const TenantDetailsModal: React.FC<TenantDetailsModalProps> = ({
                                     <div>
                                         <p className="text-xs text-gray-500">Status</p>
                                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium capitalize ${agreement.status === 'active' ? 'bg-green-100 text-green-700' :
-                                                agreement.status === 'expired' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-red-100 text-red-700'
+                                            agreement.status === 'expired' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-red-100 text-red-700'
                                             }`}>
                                             {agreement.status}
                                         </span>
@@ -284,6 +295,27 @@ export const TenantDetailsModal: React.FC<TenantDetailsModalProps> = ({
                 <div className="pt-4">
                     <Button onClick={onClose} className="w-full">Close</Button>
                 </div>
+
+                {/* Image Preview Overlay */}
+                {selectedImage && (
+                    <div
+                        className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 transition-all duration-300"
+                        onClick={() => setSelectedImage(null)}
+                    >
+                        <button
+                            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                            onClick={() => setSelectedImage(null)}
+                        >
+                            <X size={24} />
+                        </button>
+                        <img
+                            src={selectedImage}
+                            alt="Preview"
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                )}
             </div>
         </Modal>
     );

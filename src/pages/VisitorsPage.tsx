@@ -11,12 +11,14 @@ import { format } from 'date-fns';
 import QRCode from 'qrcode.react';
 import { ManageGatesModal } from '@/components/visitors/ManageGatesModal';
 import { GateService } from '@/services/supabase.service';
-import { Gate } from '@/types';
+import { Gate, Building } from '@/types';
+import { formatFlatName } from '@/utils/flat.utils';
 
 export const VisitorsPage: React.FC = () => {
   const { user } = useAuthStore();
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [flats, setFlats] = useState<any[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
@@ -29,10 +31,32 @@ export const VisitorsPage: React.FC = () => {
     if (user?.societyId) {
       loadVisitors();
       loadFlats();
+      loadBuildings();
       loadGates();
       loadResidents();
     }
   }, [user]);
+
+  const loadBuildings = async () => {
+    if (!user?.societyId) return;
+    try {
+      const { data, error } = await supabase
+        .from('buildings')
+        .select('*')
+        .eq('society_id', user.societyId);
+      if (error) throw error;
+      setBuildings((data || []).map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        societyId: b.society_id,
+        totalFloors: b.total_floors || 0,
+        totalFlats: b.total_flats || 0,
+        createdAt: b.created_at || new Date().toISOString()
+      })));
+    } catch (error) {
+      console.error('Error loading buildings:', error);
+    }
+  };
 
   const loadGates = async () => {
     if (!user?.societyId) return;
@@ -63,7 +87,7 @@ export const VisitorsPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('flats')
-        .select('id, flat_number, floor, owner_id, tenant_id')
+        .select('id, flat_number, floor, owner_id, tenant_id, building_id')
         .eq('society_id', user.societyId)
         .order('flat_number', { ascending: true });
 
@@ -352,7 +376,9 @@ export const VisitorsPage: React.FC = () => {
                               {visitor.phone}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {flat ? flat.flat_number : visitor.flatId}
+                              {flat ? (
+                                formatFlatName(flat.flat_number, buildings.find(b => b.id === flat.building_id)?.name)
+                              ) : visitor.flatId}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {(() => {
@@ -519,7 +545,11 @@ export const VisitorsPage: React.FC = () => {
             <VisitorPassModal
               visitor={selectedVisitor}
               onClose={() => setSelectedVisitor(null)}
-              flatNumber={flats.find(f => f.id === selectedVisitor.flatId)?.flat_number || selectedVisitor.flatId}
+              flatNumber={(() => {
+                const flat = flats.find(f => f.id === selectedVisitor.flatId);
+                const building = buildings.find(b => b.id === flat?.building_id);
+                return flat ? formatFlatName(flat.flat_number, building?.name) : (selectedVisitor.flatId || 'N/A');
+              })()}
             />
           )
         }
