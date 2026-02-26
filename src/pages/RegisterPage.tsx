@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 
 export const RegisterPage: React.FC = () => {
     const navigate = useNavigate();
-    const { signUp, signInWithGoogle, user } = useAuthStore();
+    const { signUp, user } = useAuthStore();
 
     React.useEffect(() => {
         if (user) {
@@ -81,30 +81,13 @@ export const RegisterPage: React.FC = () => {
                     <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-full mb-4">
                         <Building2 className="text-white" size={32} />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Society Manager</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Society Prabandh</h1>
                     <p className="text-gray-600 mt-2">Create your account</p>
                 </div>
 
                 {/* Register Form */}
                 <div className="bg-white rounded-lg shadow-xl p-8">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        className="w-full mb-6 flex items-center justify-center gap-2"
-                        onClick={() => signInWithGoogle()}
-                    >
-                        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                        Sign up with Google
-                    </Button>
 
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Or register with email</span>
-                        </div>
-                    </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <Input

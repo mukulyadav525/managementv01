@@ -216,7 +216,7 @@ export const FlatsPage: React.FC = () => {
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">
-                            {user?.role === 'owner' ? 'My Flats' : 'Property Management'}
+                            {user?.role === 'owner' ? 'My Flats' : 'Property Prabandh'}
                         </h1>
                         <p className="text-gray-600 mt-1">
                             {user?.role === 'owner' ? 'View your allotted flats' : 'Manage buildings and flats in the society'}

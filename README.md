@@ -1,11 +1,11 @@
-# 🏢 Smart Society & Rental Management System
+# 🏢 Smart Society Prabandh & Rental System
 
 A comprehensive web-based platform for managing apartments, societies, landlords, tenants, and residents. Built with React, TypeScript, and Supabase.
 
 ## ✨ Features
 
 ### 👥 Multi-Role Support
-- **Society Admin/RWA**: Complete society management
+- **Society Admin/RWA**: Complete society prabandh
 - **Landlord/Flat Owner**: Tenant & rental management
 - **Tenant/Resident**: View payments, raise complaints
 - **Security Guard**: Visitor management
@@ -282,7 +282,7 @@ Your app will be live at: `https://societyprabandh.netlify.app`
 
 ## 📧 Support
 
-For support, email: support@societymanager.com
+For support, email: support@societyprabandh.com
 
 ## 🙏 Acknowledgments
 

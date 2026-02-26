@@ -5,24 +5,24 @@
 const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
 
 export class EmailService {
-    static async sendRegistrationEmail(email: string, password: string, name: string) {
-        if (!RESEND_API_KEY || RESEND_API_KEY.startsWith('re_123')) {
-            console.warn('EmailService: Resend API Key is missing or default. Skipping email dispatch.');
-            return;
-        }
+  static async sendRegistrationEmail(email: string, password: string, name: string) {
+    if (!RESEND_API_KEY || RESEND_API_KEY.startsWith('re_123')) {
+      console.warn('EmailService: Resend API Key is missing or default. Skipping email dispatch.');
+      return;
+    }
 
-        try {
-            const response = await fetch('https://api.resend.com/emails', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${RESEND_API_KEY}`,
-                },
-                body: JSON.stringify({
-                    from: 'Society Management <onboarding@resend.dev>',
-                    to: [email],
-                    subject: 'Welcome to your Society Portal!',
-                    html: `
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: 'Society Prabandh <onboarding@resend.dev>',
+          to: [email],
+          subject: 'Welcome to your Society Portal!',
+          html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 12px;">
               <h2 style="color: #2563eb;">Welcome, ${name}!</h2>
               <p style="color: #374151;">Your account has been created by your society administrator.</p>
@@ -44,17 +44,17 @@ export class EmailService {
               </div>
             </div>
           `,
-                }),
-            });
+        }),
+      });
 
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('EmailService: Failed to send email:', error);
-            } else {
-                console.log('EmailService: Registration email sent successfully to', email);
-            }
-        } catch (error) {
-            console.error('EmailService: Network error while sending email:', error);
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('EmailService: Failed to send email:', error);
+      } else {
+        console.log('EmailService: Registration email sent successfully to', email);
+      }
+    } catch (error) {
+      console.error('EmailService: Network error while sending email:', error);
     }
+  }
 }

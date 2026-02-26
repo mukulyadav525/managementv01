@@ -227,7 +227,7 @@ export const AdminSalaryPage: React.FC = () => {
             <Layout>
                 <div className="p-8 text-center text-gray-500 flex items-center justify-center min-h-[400px]">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-2"></div>
-                    Loading salary management...
+                    Loading salary prabandh...
                 </div>
             </Layout>
         );
@@ -238,7 +238,7 @@ export const AdminSalaryPage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Salary Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Salary Prabandh</h1>
                         <p className="text-gray-600">Review and process employee and staff salary requests</p>
                     </div>
                     <Button onClick={() => {

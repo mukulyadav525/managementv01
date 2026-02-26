@@ -163,7 +163,7 @@ export const AdminDashboardPage: React.FC = () => {
                 {/* Page Header */}
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-                    <p className="text-gray-600 mt-1">Society-wide management and overview</p>
+                    <p className="text-gray-600 mt-1">Society-wide prabandh and overview</p>
                 </div>
 
                 {/* Stats Grid */}

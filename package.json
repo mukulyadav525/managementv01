@@ -1,7 +1,7 @@
 {
   "name": "society-management-system",
   "version": "1.0.0",
-  "description": "Smart Society & Rental Management Platform",
+  "description": "Smart Society Prabandh & Rental Platform",
   "private": true,
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",

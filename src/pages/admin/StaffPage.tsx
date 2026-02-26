@@ -135,7 +135,7 @@ export const StaffPage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Staff Prabandh</h1>
                         <p className="text-gray-600 mt-1">Manage society and domestic staff members</p>
                     </div>
                     <Button onClick={() => { setEditingStaff(null); setShowModal(true); }}>
@@ -300,7 +300,7 @@ export const StaffPage: React.FC = () => {
                 </Card>
 
                 {showModal && (
-                    <StaffManagementModal
+                    <StaffPrabandhModal
                         isOpen={showModal}
                         onClose={() => setShowModal(false)}
                         onSubmit={handleSaveStaff}
@@ -381,14 +381,14 @@ const CredentialSuccessModal: React.FC<{
     );
 };
 
-interface StaffManagementModalProps {
+interface StaffPrabandhModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: any) => void;
     initialData?: any;
 }
 
-const StaffManagementModal: React.FC<StaffManagementModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
+const StaffPrabandhModal: React.FC<StaffPrabandhModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
     const [formData, setFormData] = useState({
         name: initialData?.name || '',
         email: initialData?.email || '',

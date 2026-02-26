@@ -278,7 +278,7 @@ export const ResidentsPage: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Resident Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Resident Prabandh</h1>
                         <p className="text-gray-600 mt-1">Manage users, roles, and access permissions</p>
                     </div>
                     <div className="flex gap-2">

@@ -67,7 +67,7 @@ const getNavItems = (userRole: string): NavItem[] => {
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user, signOut } = useAuthStore();
-  const [societyName, setSocietyName] = useState('Society Manager');
+  const [societyName, setSocietyName] = useState('Society Prabandh');
   const [flatNumbers, setFlatNumbers] = useState<string>('');
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
